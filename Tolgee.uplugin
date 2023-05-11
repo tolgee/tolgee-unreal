@@ -1,0 +1,26 @@
+{
+  "FileVersion": 3,
+  "VersionName": "0.1",
+  "FriendlyName": "Tolgee",
+  "Description": "Localization tool which makes the localization process simple. Easy to integrate to React, Angular and other applications.",
+  "Category" : "Localization",
+  "CreatedBy": "Tolgee",
+  "CreatedByURL": "https://tolgee.io/",
+  "DocsURL": "https://tolgee.io/integrations/unreal",
+  "MarketplaceURL": "",
+  "SupportURL": "https://tolg.ee/slack",
+  "EnabledByDefault": false,
+  "CanContainContent": false,
+  "Modules": [
+    {
+      "Name": "Tolgee",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "TolgeeEditor",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ]
+}
