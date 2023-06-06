@@ -21,18 +21,18 @@ public:
 	void Construct(const FArguments& InArgs);
 
 private:
-	// Begin SDockTab interface
-	virtual void OnMouseLeave(const FPointerEvent& MouseEvent) override;
-	// End SDockTab interface
-
 	/**
 	 * @brief Callback executed when the DockTab is activated
 	 */
-	void ActiveTab(TSharedRef<SDockTab> DockTab, ETabActivationCause TabActivationCause);
+	void ActiveTab();
 	/**
 	 * @brief Callback executed when the DockTab is deactivated
 	 */
 	void CloseTab(TSharedRef<SDockTab> DockTab);
+	/**
+	 * @brief Callback executed when the active tab is changed
+	 */
+	void OnActiveTabChanged(TSharedPtr<SDockTab> NewlyActivated, TSharedPtr<SDockTab> PreviouslyActive);
 	/**
 	 * @brief Callback executed when the debug service wants to draw on screen
 	 */

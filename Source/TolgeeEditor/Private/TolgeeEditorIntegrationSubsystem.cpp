@@ -75,7 +75,7 @@ void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetVerb("POST");
 	HttpRequest->SetHeader(TEXT("X-API-Key"), GetDefault<UTolgeeSettings>()->ApiKey);
-	HttpRequest->SetURL(TEXT("https://app.tolgee.io/v2/projects/keys/import"));
+	HttpRequest->SetURL(TolgeeUtils::GetUrlEndpoint(TEXT("v2/projects/keys/import")));
 	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 	HttpRequest->SetContentAsString(Json);
 	HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnMissingKeysUploaded);
@@ -117,7 +117,7 @@ void UTolgeeEditorIntegrationSubsystem::PurgeUnusedKeys()
 	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetVerb("DELETE");
 	HttpRequest->SetHeader(TEXT("X-API-Key"), GetDefault<UTolgeeSettings>()->ApiKey);
-	HttpRequest->SetURL(TEXT("https://app.tolgee.io/v2/projects/keys"));
+	HttpRequest->SetURL(TolgeeUtils::GetUrlEndpoint(TEXT("v2/projects/keys")));
 	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 	HttpRequest->SetContentAsString(Json);
 	HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnUnusedKeysPurged);

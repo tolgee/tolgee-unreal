@@ -106,7 +106,7 @@ void FTolgeeEditorModule::ExtendToolbar(FToolBarBuilder& Builder)
 					FUIAction(FExecuteAction::CreateLambda(
 						[]()
 						{
-							FPlatformProcess::LaunchURL(*TolgeeUtils::GetProjectAppUrl(), nullptr, nullptr);
+							FPlatformProcess::LaunchURL(*TolgeeUtils::GetProjectUrlEndpoint(), nullptr, nullptr);
 						}
 					))
 				);
