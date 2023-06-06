@@ -30,8 +30,16 @@ FString TolgeeUtils::AppendQueryParameters(const FString& BaseUrl, const TArray<
 
 	return FinalUrl;
 }
-FString TolgeeUtils::GetProjectAppUrl()
+
+FString TolgeeUtils::GetUrlEndpoint(const FString& EndPoint)
 {
-	const FString& ProjectId = GetDefault<UTolgeeSettings>()->ProjectId;
-	return FString::Printf(TEXT("https://app.tolgee.io/projects/%s"), *ProjectId);
+	const FString& BaseUrl = GetDefault<UTolgeeSettings>()->ApiUrl;
+	return FString::Printf(TEXT("%s/%s"), *BaseUrl, *EndPoint);
+}
+
+FString TolgeeUtils::GetProjectUrlEndpoint(const FString& EndPoint /* = TEXT("") */)
+{
+	const FString ProjectId = GetDefault<UTolgeeSettings>()->ProjectId;
+	const FString ProjectEndPoint = FString::Printf(TEXT("projects/%s/%s"), *ProjectId, *EndPoint);
+	return GetUrlEndpoint(ProjectEndPoint);
 }

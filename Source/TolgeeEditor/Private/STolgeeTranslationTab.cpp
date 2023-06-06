@@ -1,4 +1,4 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
 
 #include "STolgeeTranslationTab.h"
 
@@ -17,20 +17,23 @@ namespace
 
 void STolgeeTranslationTab::Construct(const FArguments& InArgs)
 {
+	ActiveTab();
 	// clang-format off
 	SDockTab::Construct( SDockTab::FArguments()
 		.TabRole(NomadTab)
-		.OnTabActivated_Raw(this, &STolgeeTranslationTab::ActiveTab)
 		.OnTabClosed_Raw(this, &STolgeeTranslationTab::CloseTab)
 	[
 		SAssignNew(Browser, SWebBrowser)
-		.InitialURL(TolgeeUtils::GetProjectAppUrl())
+		.InitialURL(TolgeeUtils::GetProjectUrlEndpoint())
 		.ShowControls(false)
+		.ShowErrorMessage(true)
 	]);
 	// clang-format on
+
+	FGlobalTabmanager::Get()->OnActiveTabChanged_Subscribe(FOnActiveTabChanged::FDelegate::CreateSP(this, &STolgeeTranslationTab::OnActiveTabChanged));
 }
 
-void STolgeeTranslationTab::ActiveTab(TSharedRef<SDockTab> DockTab, ETabActivationCause TabActivationCause)
+void STolgeeTranslationTab::ActiveTab()
 {
 	DrawHandle = UDebugDrawService::Register(TEXT("Game"), FDebugDrawDelegate::CreateSP(this, &STolgeeTranslationTab::DebugDrawCallback));
 }
@@ -40,24 +43,27 @@ void STolgeeTranslationTab::CloseTab(TSharedRef<SDockTab> DockTab)
 	UDebugDrawService::Unregister(DrawHandle);
 }
 
-void STolgeeTranslationTab::OnMouseLeave(const FPointerEvent& MouseEvent)
+void STolgeeTranslationTab::OnActiveTabChanged(TSharedPtr<SDockTab> PreviouslyActive, TSharedPtr<SDockTab> NewlyActivated)
 {
-	SCompoundWidget::OnMouseLeave(MouseEvent);
-
-	GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>()->ManualFetch();
+	if (PreviouslyActive == AsShared())
+	{
+		GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>()->ManualFetch();
+	}
 }
 
 void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController* PC)
 {
 	FSlateApplication& Application = FSlateApplication::Get();
 	FWidgetPath WidgetPath = Application.LocateWindowUnderMouse(Application.GetCursorPos(), Application.GetInteractiveTopLevelWindows());
-	if (WidgetPath.Widgets.Num() > 0)
+
+	TSharedPtr<SViewport> GameViewportWidget = GEngine->GameViewport->GetGameViewportWidget();
+
+	if (WidgetPath.Widgets.Num() > 0 && WidgetPath.ContainsWidget(GameViewportWidget.Get()))
 	{
 		TSharedPtr<SWidget> CurrentHoveredWidget = WidgetPath.GetLastWidget();
 		if (CurrentHoveredWidget->GetType() == STextBlockType)
 		{
 			TSharedPtr<STextBlock> CurrentTextBlock = StaticCastSharedPtr<STextBlock>(CurrentHoveredWidget);
-			TSharedPtr<SViewport> GameViewportWidget = GEngine->GameViewport->GetGameViewportWidget();
 
 			// Calculate the Start & End in local space based on widget & parent viewport
 			const FGeometry& HoveredGeometry = CurrentHoveredWidget->GetCachedGeometry();
@@ -78,7 +84,9 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 			const TOptional<FString> Key = FTextInspector::GetKey(CurrentText);
 
 			// Update the browser widget if the current state allows
-			const FString NewUrl = FString::Printf(TEXT("%s/translations/single?key=%s&ns=%s"), *TolgeeUtils::GetProjectAppUrl(), *Key.Get(""), *Namespace.Get(""));
+
+			const FString EndPoint = FString::Printf(TEXT("translations/single?key=%s&ns=%s"), *Key.Get(""), *Namespace.Get(""));
+			const FString NewUrl = TolgeeUtils::GetProjectUrlEndpoint(EndPoint);
 			const FString CurrentUrl = Browser->GetUrl();
 			if (NewUrl != CurrentUrl && Browser->IsLoaded())
 			{

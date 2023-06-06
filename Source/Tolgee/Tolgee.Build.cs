@@ -10,7 +10,8 @@ public class Tolgee : ModuleRules
             new string[]
             {
                 "Core", 
-                "DeveloperSettings"
+                "DeveloperSettings", 
+                "HTTP",
             }
         );
 
@@ -19,7 +20,6 @@ public class Tolgee : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "HTTP",
                 "Json",
                 "JsonUtilities",
             }

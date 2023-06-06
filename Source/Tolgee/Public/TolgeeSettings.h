@@ -3,6 +3,7 @@
 #pragma once
 
 #include <Engine/DeveloperSettings.h>
+#include <Interfaces/IHttpRequest.h>
 
 #include "TolgeeSettings.generated.h"
 
@@ -28,9 +29,14 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Tolgee Localization")
 	FString ApiKey = TEXT("");
 	/**
-	 * @brief Id of the Tolgee project we should use for translation
+	 * @brief Url of the Tolgee server. Useful for self-hosted installations
 	 */
 	UPROPERTY(Config, EditAnywhere, Category = "Tolgee Localization")
+	FString ApiUrl = TEXT("https://app.tolgee.io");
+	/**
+	 * @brief Id of the Tolgee project we should use for translation
+	 */
+	UPROPERTY(Config, VisibleAnywhere, Category = "Tolgee Localization")
 	FString ProjectId = TEXT("");
 	/**
 	 * @brief Should we automatically fetch translation data at runtime?
@@ -51,6 +57,16 @@ private:
 	virtual FName GetSectionName() const override;
 #if WITH_EDITOR
 	virtual FText GetSectionText() const override;
+	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 	// End UDeveloperSettings interface
+
+	/**
+	 * @brief Sends a request to the Tolgee server to get information about the current project based on the ApiKey
+	 */
+	void FetchProjectId();
+	/**
+	 * @brief Callback executed when the information about the current Project is retried
+	 */
+	void OnProjectIdFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 };

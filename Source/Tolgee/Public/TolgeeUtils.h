@@ -15,9 +15,14 @@ namespace TolgeeUtils
 	 */
 	FString TOLGEE_API AppendQueryParameters(const FString& BaseUrl, const TArray<FString>& Parameters);
 	/**
-	 * @brief Constructs the Tolgee app url based on our current settings
+	 * @brief Creates the endpoint url for an API call based on an endpoint path and the currently assigned ApiUrl
 	 */
-	FString TOLGEE_API GetProjectAppUrl();
+	FString TOLGEE_API GetUrlEndpoint(const FString& EndPoint);
+	/**
+	 * @brief Creates the endpoint url for a project API call based on an endpoint path and the currently assigned ApiUrl and ProjectId
+	 * @note Can be used with an empty endpoint path to get the link to the web dashboard.
+	 */
+	FString TOLGEE_API GetProjectUrlEndpoint(const FString& EndPoint = TEXT(""));
 
 	inline FString DefaultTextPrefix = TEXT("OriginalText:");
 	inline FString KeyHashPrefix = TEXT("OriginalHash:");
