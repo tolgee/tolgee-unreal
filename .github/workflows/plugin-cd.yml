@@ -10,3 +10,4 @@ jobs:
     uses:  outoftheboxplugins/BuildMachines/.github/workflows/package-plugin.yml@master
     with:
       plugin_name: 'Tolgee'
+    secrets: inherit
