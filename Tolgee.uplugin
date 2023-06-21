@@ -8,7 +8,7 @@
   "CreatedBy": "Tolgee",
   "CreatedByURL": "https://tolgee.io/",
   "DocsURL": "https://tolgee.io/integrations/unreal",
-  "MarketplaceURL": "",
+  "MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/2757e202f8f3408bbf66f65d26223398",
   "SupportURL": "https://tolg.ee/slack",
   "EnabledByDefault": false,
   "CanContainContent": false,
@@ -21,7 +21,8 @@
     {
       "Name": "TolgeeEditor",
       "Type": "Editor",
-      "LoadingPhase": "Default"
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [ "Win64", "Mac", "Linux" ]
     }
   ]
 }
