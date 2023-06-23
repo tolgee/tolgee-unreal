@@ -16,7 +16,8 @@
     {
       "Name": "Tolgee",
       "Type": "Runtime",
-      "LoadingPhase": "Default"
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [ "AllDesktop", "Android", "HoloLens", "IOS", "Linux", "LinuxAArch64", "LinuxArm64", "Mac", "PS4", "Switch", "TVOS", "Win64", "XboxOne" ]
     },
     {
       "Name": "TolgeeEditor",
