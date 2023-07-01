@@ -98,19 +98,20 @@ void UTolgeeLocalizationSubsystem::FetchTranslation()
 	FOnTranslationFetched OnDoneCallback = FOnTranslationFetched::CreateUObject(this, &UTolgeeLocalizationSubsystem::RefreshTranslationData);
 	bFetchInProgress = true;
 
-	// TODO: Should we feed something into the languages?
-	FetchNextTranslation(MoveTemp(OnDoneCallback), {}, {}, {});
+	FetchNextTranslation(MoveTemp(OnDoneCallback), {}, {});
 }
 
-void UTolgeeLocalizationSubsystem::FetchNextTranslation(FOnTranslationFetched Callback, TArray<FString> Languages, TArray<FTolgeeKeyData> CurrentTranslations, const FString& NextCursor)
+void UTolgeeLocalizationSubsystem::FetchNextTranslation(FOnTranslationFetched Callback, TArray<FTolgeeKeyData> CurrentTranslations, const FString& NextCursor)
 {
+	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
+
 	TArray<FString> QueryParameters;
 	if (!NextCursor.IsEmpty())
 	{
 		QueryParameters.Emplace(FString::Printf(TEXT("cursor=%s"), *NextCursor));
 	}
 
-	for (const FString& Language : Languages)
+	for (const FString& Language : Settings->Languages)
 	{
 		QueryParameters.Emplace(FString::Printf(TEXT("languages=%s"), *Language));
 	}
@@ -119,14 +120,14 @@ void UTolgeeLocalizationSubsystem::FetchNextTranslation(FOnTranslationFetched Ca
 	const FString RequestUrl = TolgeeUtils::AppendQueryParameters(EndpointUrl, QueryParameters);
 	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetVerb("GET");
-	HttpRequest->SetHeader(TEXT("X-API-Key"), GetDefault<UTolgeeSettings>()->ApiKey);
+	HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
 	HttpRequest->SetURL(RequestUrl);
-	HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnNextTranslationFetched, Callback, Languages, CurrentTranslations);
+	HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnNextTranslationFetched, Callback, CurrentTranslations);
 	HttpRequest->ProcessRequest();
 }
 
 void UTolgeeLocalizationSubsystem::OnNextTranslationFetched(
-	FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful, FOnTranslationFetched Callback, TArray<FString> Languages, TArray<FTolgeeKeyData> CurrentTranslations
+	FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful, FOnTranslationFetched Callback, TArray<FTolgeeKeyData> CurrentTranslations
 )
 {
 	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeLocalizationSubsystem::OnNextTranslationFetched"));
@@ -181,7 +182,7 @@ void UTolgeeLocalizationSubsystem::OnNextTranslationFetched(
 	}
 	else
 	{
-		FetchNextTranslation(Callback, Languages, CurrentTranslations, NextCursor);
+		FetchNextTranslation(Callback, CurrentTranslations, NextCursor);
 	}
 }
 

@@ -59,23 +59,19 @@ private:
 	/**
 	 * @brief Sends a GET request based on the current cursor to fetch the remaining keys.
 	 * @param Callback to be executed when all the keys are fetched
-	 * @param Languages Languages we want to retrieve
 	 * @param CurrentTranslations Keys retrieved by previous requests
 	 * @param NextCursor Indicator for the start of the next requests
 	 */
-	void FetchNextTranslation(FOnTranslationFetched Callback, TArray<FString> Languages, TArray<FTolgeeKeyData> CurrentTranslations, const FString& NextCursor);
+	void FetchNextTranslation(FOnTranslationFetched Callback, TArray<FTolgeeKeyData> CurrentTranslations, const FString& NextCursor);
 	/**
 	 * @brief Callback executed when a translation fetch is retrieved.
 	 * @param Request Request that triggered this callback
 	 * @param Response Response retrieved from the backend
 	 * @param bWasSuccessful Request status
 	 * @param Callback Callback to be executed when all the keys are fetched
-	 * @param Languages Languages we want to retrieve
 	 * @param CurrentTranslations Keys retrieved by previous requests
 	 */
-	void OnNextTranslationFetched(
-		FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful, FOnTranslationFetched Callback, TArray<FString> Languages, TArray<FTolgeeKeyData> CurrentTranslations
-	);
+	void OnNextTranslationFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful, FOnTranslationFetched Callback, TArray<FTolgeeKeyData> CurrentTranslations);
 	/**
 	 * @brief Triggers an async refresh of the LocalizationManager resources.
 	 * @param Translations Keys we should use for the TolgeeTextSource

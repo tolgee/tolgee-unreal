@@ -39,6 +39,11 @@ public:
 	UPROPERTY(Config, VisibleAnywhere, Category = "Tolgee Localization")
 	FString ProjectId = TEXT("");
 	/**
+	 * @brief Locales we should fetch translations for
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Tolgee Localization")
+	TArray<FString> Languages;
+	/**
 	 * @brief Should we automatically fetch translation data at runtime?
 	 */
 	UPROPERTY(Config, EditAnywhere, Category = "Tolgee Localization")
@@ -66,7 +71,15 @@ private:
 	 */
 	void FetchProjectId();
 	/**
-	 * @brief Callback executed when the information about the current Project is retried
+	 * @brief Callback executed when the information about the current project is retried
 	 */
 	void OnProjectIdFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+	/**
+	 * @brief Sends a request to the Tolgee server to get language information about the current project based on the ApiKey
+	 */
+	void FetchDefaultLanguages();
+	/**
+	 * @brief Callback executed when the language information about the current project is retrieved
+	 */
+	void OnDefaultLanguagesFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 };
