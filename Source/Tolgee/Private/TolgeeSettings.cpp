@@ -148,7 +148,7 @@ void UTolgeeSettings::OnDefaultLanguagesFetched(FHttpRequestPtr Request, FHttpRe
 	Languages.Empty();
 
 	TArray<TSharedPtr<FJsonValue>> LanguageStats = JsonObject->GetArrayField(TEXT("languageStats"));
-	for (const TSharedPtr<FJsonValue> Language : LanguageStats)
+	for (const TSharedPtr<FJsonValue>& Language : LanguageStats)
 	{
 		FString LanguageLocale;
 		Language->AsObject()->TryGetStringField(TEXT("languageTag"), LanguageLocale);
