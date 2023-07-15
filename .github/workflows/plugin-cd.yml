@@ -8,3 +8,6 @@ on:
 jobs:
   plugin-cd:
     uses:  outoftheboxplugins/BuildMachines/.github/workflows/package-plugin.yml@master
+    with:
+      plugin_name: 'Tolgee'
+    secrets: inherit

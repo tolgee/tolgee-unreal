@@ -58,6 +58,8 @@ void UTolgeeSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChan
 
 void UTolgeeSettings::FetchProjectId()
 {
+	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeSettings::FetchProjectId"));
+
 	const FString RequestUrl = TolgeeUtils::GetUrlEndpoint(TEXT("v2/api-keys/current"));
 	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetVerb("GET");
@@ -100,6 +102,58 @@ void UTolgeeSettings::OnProjectIdFetched(FHttpRequestPtr Request, FHttpResponseP
 		JsonObject->TryGetNumberField(TEXT("projectId"), ProjectIdValue);
 		return LexToString(ProjectIdValue);
 	}();
+
+	SaveConfig();
+
+	FetchDefaultLanguages();
+}
+
+void UTolgeeSettings::FetchDefaultLanguages()
+{
+	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeSettings::FetchDefaultLanguages"));
+
+	const FString RequestUrl = TolgeeUtils::GetUrlEndpoint(TEXT("v2/projects/stats"));
+	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
+	HttpRequest->SetVerb("GET");
+	HttpRequest->SetHeader(TEXT("X-API-Key"), ApiKey);
+	HttpRequest->SetURL(RequestUrl);
+	HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnDefaultLanguagesFetched);
+	HttpRequest->ProcessRequest();
+}
+
+void UTolgeeSettings::OnDefaultLanguagesFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
+{
+	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeSettings::OnDefaultLanguagesFetched"));
+
+	if (!bWasSuccessful)
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Request to fetch default languages was unsuccessful."));
+		return;
+	}
+
+	if (!EHttpResponseCodes::IsOk(Response->GetResponseCode()))
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Request to fetch default languages received unexpected code: %s"), *LexToString(Response->GetResponseCode()));
+		return;
+	}
+
+	TSharedPtr<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+	const TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(Response->GetContentAsString());
+	if (!FJsonSerializer::Deserialize(JsonReader, JsonObject))
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Could not deserialize response: %s"), *LexToString(Response->GetContentAsString()));
+		return;
+	}
+
+	Languages.Empty();
+
+	TArray<TSharedPtr<FJsonValue>> LanguageStats = JsonObject->GetArrayField(TEXT("languageStats"));
+	for (const TSharedPtr<FJsonValue>& Language : LanguageStats)
+	{
+		FString LanguageLocale;
+		Language->AsObject()->TryGetStringField(TEXT("languageTag"), LanguageLocale);
+		Languages.Add(LanguageLocale);
+	}
 
 	SaveConfig();
 }
