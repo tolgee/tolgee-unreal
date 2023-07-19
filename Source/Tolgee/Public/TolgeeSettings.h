@@ -22,6 +22,11 @@ public:
 	 */
 	static void OpenSettings();
 #endif
+	/**
+	 * @brief Checks if all the conditions to send requests to the Tolgee backend are met
+	 * @note ApiKey, ApiUrl & ProjectId set properly
+	 */
+	bool IsReadyToSendRequests() const;
 	/*
 	 * @brief Authentication key for fetching translation data
 	 * @see https://tolgee.io/platform/account_settings/api_keys_and_pat_tokens

@@ -89,6 +89,13 @@ void UTolgeeLocalizationSubsystem::FetchTranslation()
 {
 	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeLocalizationSubsystem::FetchTranslation"));
 
+	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
+	if(!Settings->IsReadyToSendRequests())
+	{
+		UE_LOG(LogTolgee, Warning, TEXT("Settings are not set up properly. Fetch request will be skipped."));
+		return;
+	}
+
 	if (bFetchInProgress)
 	{
 		UE_LOG(LogTolgee, Verbose, TEXT("Fetch skipped, an update is already in progress."));
