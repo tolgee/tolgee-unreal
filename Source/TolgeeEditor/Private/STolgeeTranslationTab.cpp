@@ -24,7 +24,7 @@ void STolgeeTranslationTab::Construct(const FArguments& InArgs)
 		.OnTabClosed_Raw(this, &STolgeeTranslationTab::CloseTab)
 	[
 		SAssignNew(Browser, SWebBrowser)
-		.InitialURL(TolgeeUtils::GetProjectUrlEndpoint())
+		.InitialURL(TolgeeUtils::GetUrlEndpoint(TEXT("login")))
 		.ShowControls(false)
 		.ShowErrorMessage(true)
 	]);

@@ -22,6 +22,11 @@ void UTolgeeSettings::OpenSettings()
 }
 #endif
 
+bool UTolgeeSettings::IsReadyToSendRequests() const
+{
+	return !ApiKey.IsEmpty() && !ApiUrl.IsEmpty() && !ProjectId.IsEmpty();
+}
+
 FName UTolgeeSettings::GetContainerName() const
 {
 	return TEXT("Project");
