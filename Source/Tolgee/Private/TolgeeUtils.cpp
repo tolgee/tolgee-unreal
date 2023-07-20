@@ -3,6 +3,7 @@
 #include "TolgeeUtils.h"
 
 #include <Internationalization/TextLocalizationResource.h>
+#include <Interfaces/IPluginManager.h>
 
 #include "TolgeeSettings.h"
 
@@ -42,4 +43,15 @@ FString TolgeeUtils::GetProjectUrlEndpoint(const FString& EndPoint /* = TEXT("")
 	const FString ProjectId = GetDefault<UTolgeeSettings>()->ProjectId;
 	const FString ProjectEndPoint = FString::Printf(TEXT("projects/%s/%s"), *ProjectId, *EndPoint);
 	return GetUrlEndpoint(ProjectEndPoint);
+}
+
+FString TolgeeUtils::GetSdkType()
+{
+	return TEXT("Unreal");
+}
+
+FString TolgeeUtils::GetSdkVersion()
+{
+	const TSharedPtr<IPlugin> TolgeePlugin = IPluginManager::Get().FindPlugin("Tolgee");
+	return TolgeePlugin->GetDescriptor().VersionName;
 }
