@@ -128,6 +128,8 @@ void UTolgeeLocalizationSubsystem::FetchNextTranslation(FOnTranslationFetched Ca
 	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetVerb("GET");
 	HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
+	HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Type"), TolgeeUtils::GetSdkType());
+	HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Version"), TolgeeUtils::GetSdkVersion());
 	HttpRequest->SetURL(RequestUrl);
 	HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnNextTranslationFetched, Callback, CurrentTranslations);
 	HttpRequest->ProcessRequest();

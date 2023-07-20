@@ -23,6 +23,14 @@ namespace TolgeeUtils
 	 * @note Can be used with an empty endpoint path to get the link to the web dashboard.
 	 */
 	FString TOLGEE_API GetProjectUrlEndpoint(const FString& EndPoint = TEXT(""));
+	/**
+	 * @brief Sdk type of the Tolgee integration
+	 */
+	FString TOLGEE_API GetSdkType();
+	/**
+	 * @brief Sdk version of the Tolgee integration
+	 */
+	FString TOLGEE_API GetSdkVersion();
 
 	inline FString DefaultTextPrefix = TEXT("OriginalText:");
 	inline FString KeyHashPrefix = TEXT("OriginalHash:");

@@ -139,8 +139,8 @@ void FTolgeeEditorModule::ExtendToolbar(FToolBarBuilder& Builder)
 					FUIAction(FExecuteAction::CreateLambda(
 						[]()
 						{
-							const TSharedPtr<IPlugin> CleanProjectPlugin = IPluginManager::Get().FindPlugin("Tolgee");
-							const FString DocsURL = CleanProjectPlugin->GetDescriptor().DocsURL;
+							const TSharedPtr<IPlugin> TolgeePlugin = IPluginManager::Get().FindPlugin("Tolgee");
+							const FString DocsURL = TolgeePlugin->GetDescriptor().DocsURL;
 							FPlatformProcess::LaunchURL(*DocsURL, nullptr, nullptr);
 						}
 					))

@@ -22,6 +22,7 @@ public class Tolgee : ModuleRules
                 "Engine",
                 "Json",
                 "JsonUtilities",
+                "Projects",
             }
         );
     }
