@@ -5,6 +5,7 @@
 #include <HttpModule.h>
 #include <Interfaces/IHttpRequest.h>
 #include <Interfaces/IHttpResponse.h>
+#include <Interfaces/IMainFrameModule.h>
 #include <Internationalization/InternationalizationManifest.h>
 #include <JsonObjectConverter.h>
 #include <LocalizationCommandletTasks.h>
@@ -15,6 +16,7 @@
 #include <Misc/MessageDialog.h>
 #include <Serialization/JsonInternationalizationManifestSerializer.h>
 
+#include "TolgeeEditor.h"
 #include "TolgeeLocalizationSubsystem.h"
 #include "TolgeeLog.h"
 #include "TolgeeSettings.h"
@@ -329,6 +331,39 @@ void UTolgeeEditorIntegrationSubsystem::OnUnusedKeysPurged(FHttpRequestPtr Reque
 	UE_LOG(LogTolgee, Log, TEXT("Unused keys purged successfully."));
 
 	GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>()->ManualFetch();
+}
+
+void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady()
+{
+	const UTolgeeSettings* TolgeeSettings = GetDefault<UTolgeeSettings>();
+
+	// If the API Key is not set in the settings, the user has not completed the setup, therefore we will our welcome tab.
+	if (TolgeeSettings && TolgeeSettings->ApiKey.IsEmpty())
+	{
+		FTolgeeEditorModule& TolgeeEditorModule = FTolgeeEditorModule::Get();
+		TolgeeEditorModule.ActivateWindowTab();
+	}
+}
+
+void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+
+	IMainFrameModule& MainFrameModule = IMainFrameModule::Get();
+	if (MainFrameModule.IsWindowInitialized())
+	{
+		OnMainFrameReady();
+	}
+	else
+	{
+		MainFrameModule.OnMainFrameCreationFinished().AddWeakLambda(
+			this,
+			[=](TSharedPtr<SWindow> InRootWindow, bool bIsRunningStartupDialog)
+			{
+				OnMainFrameReady();
+			}
+		);
+	}
 }
 
 #undef LOCTEXT_NAMESPACE
