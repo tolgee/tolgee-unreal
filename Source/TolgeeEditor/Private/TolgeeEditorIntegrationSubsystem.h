@@ -63,4 +63,12 @@ private:
 	 * @brief Callback executed when the keys deleted from the Tolgee backend is completed
 	 */
 	void OnUnusedKeysPurged(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+	/**
+	 * @brief Callback executed when the editor main frame is ready to display the login pop-up
+	 */
+	void OnMainFrameReady();
+
+	// Begin UEditorSubsystem interface
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	// End UEditorSubsystem interface
 };

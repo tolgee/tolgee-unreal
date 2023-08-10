@@ -19,6 +19,20 @@ namespace
 	const FName MenuTabName = FName("TolgeeDashboardMenuTab");
 }
 
+FTolgeeEditorModule& FTolgeeEditorModule::Get()
+{
+	static const FName TolgeeEditorModuleName = "TolgeeEditor";
+	return FModuleManager::LoadModuleChecked<FTolgeeEditorModule>(TolgeeEditorModuleName);
+}
+
+void FTolgeeEditorModule::ActivateWindowTab()
+{
+	if (FGlobalTabmanager::Get()->HasTabSpawner(MenuTabName))
+	{
+		FGlobalTabmanager::Get()->TryInvokeTab(MenuTabName);
+	}
+}
+
 void FTolgeeEditorModule::StartupModule()
 {
 	RegisterStyle();
