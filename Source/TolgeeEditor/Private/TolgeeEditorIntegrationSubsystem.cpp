@@ -278,7 +278,7 @@ void UTolgeeEditorIntegrationSubsystem::OnMissingKeysUploaded(FHttpRequestPtr Re
 	}
 	if (!EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 	{
-		UE_LOG(LogTolgee, Error, TEXT("Request to upload missing keys received unexpected code: %s"), *LexToString(Response->GetResponseCode()));
+		UE_LOG(LogTolgee, Error, TEXT("Request to upload missing keys received unexpected code: %s content: %s"), *LexToString(Response->GetResponseCode()), *Response->GetContentAsString());
 		return;
 	}
 
@@ -324,7 +324,7 @@ void UTolgeeEditorIntegrationSubsystem::OnUnusedKeysPurged(FHttpRequestPtr Reque
 	}
 	if (!EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 	{
-		UE_LOG(LogTolgee, Error, TEXT("Request to purge unused keys received unexpected code: %s"), *LexToString(Response->GetResponseCode()));
+		UE_LOG(LogTolgee, Error, TEXT("Request to purge unused keys received unexpected code: %s content: %s"), *LexToString(Response->GetResponseCode()), *Response->GetContentAsString());
 		return;
 	}
 
