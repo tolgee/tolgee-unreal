@@ -1,4 +1,4 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
 
 #include "TolgeeEditorIntegrationSubsystem.h"
 
@@ -28,7 +28,7 @@ namespace
 {
 	bool IsSameKey(const FTolgeeKeyData& A, const FLocalizationKey& B)
 	{
-		return A.KeyName == B.Key && A.KeyNamespace == B.Namespace && A.GetDefaultText() == B.DefaultText;
+		return A.KeyName == B.Key && A.KeyNamespace == B.Namespace && A.GetKeyHash() == TolgeeUtils::GetTranslationHash(B.DefaultText);
 	}
 } // namespace
 
@@ -52,8 +52,12 @@ void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 		return;
 	}
 
+	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
+	const FString DefaultLocale = Settings->Languages.Num() > 0 ? Settings->Languages[0] : TEXT("en");
+
+	TArray<TSharedPtr<FJsonValue>> Keys;
+
 	UE_LOG(LogTolgee, Log, TEXT("Upload request payload:"));
-	FKeysImportPayload Payload;
 	for (const auto& Key : MissingLocalKeys)
 	{
 		UE_LOG(LogTolgee, Log, TEXT("- namespace:%s key:%s default:%s"), *Key.Namespace, *Key.Key, *Key.DefaultText);
@@ -62,17 +66,24 @@ void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 		KeyItem.Name = Key.Key;
 		KeyItem.Namespace = Key.Namespace;
 
-		const FString OriginalTranslationTag = FString::Printf(TEXT("%s%s"), *TolgeeUtils::DefaultTextPrefix, *Key.DefaultText);
-		KeyItem.Tags.Emplace(OriginalTranslationTag);
+		const FString HashTag = FString::Printf(TEXT("%s%s"), *TolgeeUtils::KeyHashPrefix, *LexToString(TolgeeUtils::GetTranslationHash(Key.DefaultText)));
+		KeyItem.Tags.Emplace(HashTag);
 
-		const FString OriginalHashTag = FString::Printf(TEXT("%s%s"), *TolgeeUtils::KeyHashPrefix, *TolgeeUtils::GetTranslationHash(Key.DefaultText));
-		KeyItem.Tags.Emplace(OriginalHashTag);
+		TSharedPtr<FJsonObject> KeyObject = FJsonObjectConverter::UStructToJsonObject(KeyItem);
 
-		Payload.Keys.Add(KeyItem);
+		TSharedRef<FJsonObject> TranslationObject = MakeShareable(new FJsonObject);
+		TranslationObject->SetStringField(DefaultLocale, Key.DefaultText);
+		KeyObject->SetObjectField(TEXT("translations"), TranslationObject);
+
+		Keys.Add(MakeShared<FJsonValueObject>(KeyObject));
 	}
 
+	TSharedRef<FJsonObject> PayloadJson = MakeShared<FJsonObject>();
+	PayloadJson->SetArrayField(TEXT("keys"), Keys);
+
 	FString Json;
-	FJsonObjectConverter::UStructToJsonObjectString(Payload, Json);
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Json);
+	FJsonSerializer::Serialize(PayloadJson, Writer);
 
 	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetURL(TolgeeUtils::GetUrlEndpoint(TEXT("v2/projects/keys/import")));

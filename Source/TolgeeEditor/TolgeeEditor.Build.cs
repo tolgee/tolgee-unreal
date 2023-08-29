@@ -22,6 +22,7 @@ public class TolgeeEditor : ModuleRules
                 "EditorSubsystem",
                 "Engine",
                 "HTTP",
+                "Json",
                 "JsonUtilities",
                 "Localization", 
                 "LocalizationCommandletExecution", 

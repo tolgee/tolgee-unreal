@@ -47,21 +47,6 @@ struct FImportKeyItem
 };
 
 /**
- * @brief Payload for the key upload request
- */
-USTRUCT()
-struct FKeysImportPayload
-{
-	GENERATED_BODY()
-
-	/**
-	 * @brief Information for the keys we will be uploading
-	 */
-	UPROPERTY()
-	TArray<FImportKeyItem> Keys;
-};
-
-/**
  * @brief Representation of a local localization key
  */
 USTRUCT()

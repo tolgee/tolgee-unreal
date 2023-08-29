@@ -97,10 +97,6 @@ struct TOLGEE_API FTolgeeKeyData
 	 * @brief Returns the original key's hash based on the current assigned tags. Or 0 if no valid tag was found.
 	 */
 	uint32 GetKeyHash() const;
-	/**
-	 * @brief Returns the original key's default text based on the current assigned tags. Or empty if no valid tag was found.
-	 */
-	FString GetDefaultText() const;
 
 private:
 	/**

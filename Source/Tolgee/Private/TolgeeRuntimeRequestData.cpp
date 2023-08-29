@@ -62,13 +62,6 @@ uint32 FTolgeeKeyData::GetKeyHash() const
 	return KeyHash;
 }
 
-FString FTolgeeKeyData::GetDefaultText() const
-{
-	const FString DefaultText = GetTagValue(TolgeeUtils::DefaultTextPrefix);
-
-	return DefaultText;
-}
-
 FString FTolgeeKeyData::GetTagValue(const FString& Prefix) const
 {
 	const FTolgeeKeyTag* FoundTag = KeyTags.FindByPredicate(

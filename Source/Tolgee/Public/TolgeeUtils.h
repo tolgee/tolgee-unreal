@@ -9,7 +9,7 @@ namespace TolgeeUtils
 	/**
 	 * @brief Utility to produce a hash for a string (as used by SourceStringHash)
 	 */
-	FString TOLGEE_API GetTranslationHash(const FString& Translation);
+	uint32 TOLGEE_API GetTranslationHash(const FString& Translation);
 	/**
 	 * @brief Constructs an endpoint by appending query parameters to a base url
 	 */
@@ -32,6 +32,5 @@ namespace TolgeeUtils
 	 */
 	FString TOLGEE_API GetSdkVersion();
 
-	inline FString DefaultTextPrefix = TEXT("OriginalText:");
 	inline FString KeyHashPrefix = TEXT("OriginalHash:");
 } // namespace TolgeeUtils
