@@ -13,6 +13,7 @@
 #include <LocalizationSettings.h>
 #include <LocalizationTargetTypes.h>
 #include <Misc/FeedbackContext.h>
+#include <Misc/FileHelper.h>
 #include <Misc/MessageDialog.h>
 #include <Serialization/JsonInternationalizationManifestSerializer.h>
 
@@ -34,6 +35,7 @@ namespace
 
 void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 {
+	// TODO: Run a fetch before
 	TArray<FLocalizationKey> MissingLocalKeys = GetMissingLocalKeys();
 
 	if (MissingLocalKeys.IsEmpty())
@@ -99,6 +101,7 @@ void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 
 void UTolgeeEditorIntegrationSubsystem::PurgeUnusedKeys()
 {
+	// TODO: Run a fetch before
 	TArray<FTolgeeKeyData> UnusedRemoteKeys = GetUnusedRemoteKeys();
 
 	if (UnusedRemoteKeys.IsEmpty())
@@ -355,10 +358,43 @@ void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady()
 		TolgeeEditorModule.ActivateWindowTab();
 	}
 }
+void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
+{
+	UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
+	LocalizationSubsystem->ManualFetch();
+
+	while (LocalizationSubsystem->GetLocalizedDictionary().Keys.IsEmpty())
+	{
+		UE_LOG(LogTolgee, Display, TEXT("Waiting for translation data. Retrying in 1 second."));
+		FPlatformProcess::Sleep(1.0f);
+	}
+
+	UE_LOG(LogTolgee, Display, TEXT("Got translation data."));
+	const FLocalizedDictionary& Dictionary = LocalizationSubsystem->GetLocalizedDictionary();
+
+	FString JsonString;
+	if (!FJsonObjectConverter::UStructToJsonObjectString(Dictionary, JsonString))
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Couldn't convert the localized dictionary to string"));
+		return;
+	}
+
+	FString Filename;
+	if (!FFileHelper::SaveStringToFile(JsonString, *Filename))
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Couldn't save the localized dictionary to file: %s"), *Filename);
+		return;
+	}
+
+	UE_LOG(LogTolgee, Error, TEXT("Localized dictionary succesfully saved to file: %s"), *Filename);
+}
 
 void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+
+	UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
+	LocalizationSubsystem->ManualFetch();
 
 	IMainFrameModule& MainFrameModule = IMainFrameModule::Get();
 	if (MainFrameModule.IsWindowInitialized())
@@ -374,6 +410,11 @@ void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Col
 				OnMainFrameReady();
 			}
 		);
+	}
+
+	if (IsRunningCookCommandlet())
+	{
+		ExportLocalTranslations();
 	}
 }
 

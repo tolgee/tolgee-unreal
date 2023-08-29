@@ -35,18 +35,6 @@ TOptional<FTolgeeKeyData> FTolgeeKeyData::FromJson(TSharedPtr<FJsonValue> InValu
 	return OutData;
 }
 
-TOptional<FTolgeeTranslation> FTolgeeKeyData::GetFirstTranslation(TArrayView<const FString> InPrioritizedCultures) const
-{
-	for (const FString& Culture : InPrioritizedCultures)
-	{
-		if (const FTolgeeTranslation* FoundTranslation = Translations.Find(Culture))
-		{
-			return *FoundTranslation;
-		}
-	}
-
-	return {};
-}
 TArray<FString> FTolgeeKeyData::GetAvailableLanguages() const
 {
 	TArray<FString> Result;

@@ -67,6 +67,10 @@ private:
 	 * @brief Callback executed when the editor main frame is ready to display the login pop-up
 	 */
 	void OnMainFrameReady();
+	/**
+	 * @brief Exports the locally available data to a file on disk to package it in the final build
+	 */
+	void ExportLocalTranslations();
 
 	// Begin UEditorSubsystem interface
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
