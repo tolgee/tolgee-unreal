@@ -86,10 +86,6 @@ struct TOLGEE_API FTolgeeKeyData
 	 */
 	TMap<FString, FTolgeeTranslation> Translations;
 	/**
-	 * @brief Helper method to get the first translation available based on the priority of the cultures
-	 */
-	TOptional<FTolgeeTranslation> GetFirstTranslation(TArrayView<const FString> InPrioritizedCultures) const;
-	/**
 	 * @brief Gets all the available locales we have valid translations for
 	 */
 	TArray<FString> GetAvailableLanguages() const;
@@ -97,10 +93,6 @@ struct TOLGEE_API FTolgeeKeyData
 	 * @brief Returns the original key's hash based on the current assigned tags. Or 0 if no valid tag was found.
 	 */
 	uint32 GetKeyHash() const;
-	/**
-	 * @brief Returns the original key's default text based on the current assigned tags. Or empty if no valid tag was found.
-	 */
-	FString GetDefaultText() const;
 
 private:
 	/**
@@ -109,4 +101,54 @@ private:
 	 * @return Rest of the tag's string after the prefix is removed.
 	 */
 	FString GetTagValue(const FString& Prefix) const;
+};
+
+/**
+ * Representation of a successfully localized key
+ */
+USTRUCT()
+struct FLocalizedKey
+{
+	GENERATED_BODY()
+
+	/**
+	 * Name of the key
+	 */
+	UPROPERTY()
+	FString Name;
+	/**
+	 * Namespace of the key
+	 */
+	UPROPERTY()
+	FString Namespace;
+	/**
+	 * Unique hash of the key (calculated based on the source text)
+	 */
+	UPROPERTY()
+	uint32 Hash;
+	/**
+	 * Language this key is translated for
+	 */
+	UPROPERTY()
+	FString Locale;
+	/**
+	 * Translation for the specified locale
+	 */
+	UPROPERTY()
+	FString Translation;
+};
+
+/**
+ * Representation of a translation dictionary (multiple keys for multiple languages)
+ */
+USTRUCT()
+struct FLocalizedDictionary
+{
+	GENERATED_BODY()
+
+	/**
+	 * Localization keys for all languages
+	 */
+	UPROPERTY()
+	TArray<FLocalizedKey> Keys;
 };

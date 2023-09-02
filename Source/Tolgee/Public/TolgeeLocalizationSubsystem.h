@@ -32,7 +32,11 @@ public:
 	/**
 	 * @brief Returns the result of the last fetch operation
 	 */
-	TArray<FTolgeeKeyData> GetLastFetchedKeys() const;
+	const TArray<FTolgeeKeyData>& GetLastFetchedKeys() const;
+	/**
+	 * @brief Returns the localized dictionary used the the TolgeeTextSource
+	 */
+	const FLocalizedDictionary& GetLocalizedDictionary() const;
 
 private:
 	// Begin UEngineSubsystem interface
@@ -73,10 +77,23 @@ private:
 	 */
 	void OnNextTranslationFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful, FOnTranslationFetched Callback, TArray<FTolgeeKeyData> CurrentTranslations);
 	/**
-	 * @brief Triggers an async refresh of the LocalizationManager resources.
-	 * @param Translations Keys we should use for the TolgeeTextSource
+	 * @brief Callback executed when a fetch from the Tolgee backend is complete (all translations are fetched successfully)
+	 * @param Translations Translation data received from the backend
 	 */
-	void RefreshTranslationData(TArray<FTolgeeKeyData> Translations);
+	void OnAllTranslationsFetched(TArray<FTolgeeKeyData> Translations);
+	/**
+	 * @brief Loads the translation data from a local file on disk.
+	 */
+	void LoadLocalData();
+	/**
+	 * @brief Triggers an async refresh of the LocalizationManager resources.
+	 */
+	void RefreshTranslationData();
+	/**
+	 * @brief Data used for localization by the TolgeeTextSource
+	 * @note Could be coming from the Tolgee backend or locally saved
+	 */
+	FLocalizedDictionary LocalizedDictionary;
 	/**
 	 * @brief Cached response of the last successfully fetched keys.
 	 */

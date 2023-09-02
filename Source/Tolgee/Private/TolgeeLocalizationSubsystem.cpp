@@ -8,6 +8,9 @@
 #include <HttpModule.h>
 #include <Interfaces/IHttpResponse.h>
 #include <Internationalization/TextLocalizationResource.h>
+#include <JsonObjectConverter.h>
+#include <Misc/FileHelper.h>
+#include <Misc/Paths.h>
 #include <Serialization/JsonReader.h>
 #include <Serialization/JsonSerializer.h>
 #include <TimerManager.h>
@@ -25,28 +28,31 @@ void UTolgeeLocalizationSubsystem::ManualFetch()
 	FetchTranslation();
 }
 
-TArray<FTolgeeKeyData> UTolgeeLocalizationSubsystem::GetLastFetchedKeys() const
+const TArray<FTolgeeKeyData>& UTolgeeLocalizationSubsystem::GetLastFetchedKeys() const
 {
 	return TranslatedKeys;
+}
+
+const FLocalizedDictionary& UTolgeeLocalizationSubsystem::GetLocalizedDictionary() const
+{
+	return LocalizedDictionary;
 }
 
 void UTolgeeLocalizationSubsystem::GetLocalizedResources(
 	const ELocalizationLoadFlags InLoadFlags, TArrayView<const FString> InPrioritizedCultures, FTextLocalizationResource& InOutNativeResource, FTextLocalizationResource& InOutLocalizedResource
 ) const
 {
-	for (const FTolgeeKeyData& KeyData : TranslatedKeys)
+	for (const FLocalizedKey& KeyData : LocalizedDictionary.Keys)
 	{
-		TOptional<FTolgeeTranslation> Translation = KeyData.GetFirstTranslation(InPrioritizedCultures);
-		if (!Translation.IsSet())
+		if (!InPrioritizedCultures.Contains(KeyData.Locale))
 		{
-			// No valid translation was found for the desired locals
 			continue;
 		}
 
-		const FTextKey InNamespace = KeyData.KeyNamespace;
-		const FTextKey InKey = KeyData.KeyName;
-		const uint32 InKeyHash = KeyData.GetKeyHash();
-		const FString InLocalizedString = Translation->Text;
+		const FTextKey InNamespace = KeyData.Namespace;
+		const FTextKey InKey = KeyData.Name;
+		const uint32 InKeyHash = KeyData.Hash;
+		const FString InLocalizedString = KeyData.Translation;
 
 		if (InKeyHash)
 		{
@@ -70,18 +76,19 @@ void UTolgeeLocalizationSubsystem::Initialize(FSubsystemCollectionBase& Collecti
 	TextSource = MakeShared<FTolgeeTextSource>();
 	TextSource->GetLocalizedResources.BindUObject(this, &ThisClass::GetLocalizedResources);
 	FTextLocalizationManager::Get().RegisterTextSource(TextSource.ToSharedRef());
-
-	ManualFetch();
 }
 
 void UTolgeeLocalizationSubsystem::OnGameInstanceStart(UGameInstance* GameInstance)
 {
-	FetchTranslation();
-
 	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
 	if (Settings->bLiveTranslationUpdates)
 	{
+		FetchTranslation();
 		GameInstance->GetTimerManager().SetTimer(AutoFetchTimerHandle, this, &ThisClass::FetchTranslation, Settings->UpdateInterval, true);
+	}
+	else
+	{
+		LoadLocalData();
 	}
 }
 
@@ -90,7 +97,7 @@ void UTolgeeLocalizationSubsystem::FetchTranslation()
 	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeLocalizationSubsystem::FetchTranslation"));
 
 	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
-	if(!Settings->IsReadyToSendRequests())
+	if (!Settings->IsReadyToSendRequests())
 	{
 		UE_LOG(LogTolgee, Warning, TEXT("Settings are not set up properly. Fetch request will be skipped."));
 		return;
@@ -98,11 +105,11 @@ void UTolgeeLocalizationSubsystem::FetchTranslation()
 
 	if (bFetchInProgress)
 	{
-		UE_LOG(LogTolgee, Verbose, TEXT("Fetch skipped, an update is already in progress."));
+		UE_LOG(LogTolgee, Log, TEXT("Fetch skipped, an update is already in progress."));
 		return;
 	}
 
-	FOnTranslationFetched OnDoneCallback = FOnTranslationFetched::CreateUObject(this, &UTolgeeLocalizationSubsystem::RefreshTranslationData);
+	FOnTranslationFetched OnDoneCallback = FOnTranslationFetched::CreateUObject(this, &UTolgeeLocalizationSubsystem::OnAllTranslationsFetched);
 	bFetchInProgress = true;
 
 	FetchNextTranslation(MoveTemp(OnDoneCallback), {}, {});
@@ -143,12 +150,14 @@ void UTolgeeLocalizationSubsystem::OnNextTranslationFetched(
 
 	if (!bWasSuccessful)
 	{
+		bFetchInProgress = false;
 		UE_LOG(LogTolgee, Error, TEXT("Request to fetch translations was unsuccessful."));
 		return;
 	}
 
 	if (!EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 	{
+		bFetchInProgress = false;
 		UE_LOG(LogTolgee, Error, TEXT("Request to fetch translation received unexpected code: %s"), *LexToString(Response->GetResponseCode()));
 		return;
 	}
@@ -157,6 +166,7 @@ void UTolgeeLocalizationSubsystem::OnNextTranslationFetched(
 	const TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(Response->GetContentAsString());
 	if (!FJsonSerializer::Deserialize(JsonReader, JsonObject))
 	{
+		bFetchInProgress = false;
 		UE_LOG(LogTolgee, Error, TEXT("Could not deserialize response: %s"), *LexToString(Response->GetContentAsString()));
 		return;
 	}
@@ -195,11 +205,31 @@ void UTolgeeLocalizationSubsystem::OnNextTranslationFetched(
 	}
 }
 
-void UTolgeeLocalizationSubsystem::RefreshTranslationData(TArray<FTolgeeKeyData> Translations)
+void UTolgeeLocalizationSubsystem::OnAllTranslationsFetched(TArray<FTolgeeKeyData> Translations)
+{
+	LocalizedDictionary.Keys.Empty();
+
+	for (const FTolgeeKeyData& Translation : Translations)
+	{
+		for (const TTuple<FString, FTolgeeTranslation>& Language : Translation.Translations)
+		{
+			FLocalizedKey& Key = LocalizedDictionary.Keys.Emplace_GetRef();
+			Key.Name = Translation.KeyName;
+			Key.Namespace = Translation.KeyNamespace;
+			Key.Hash = Translation.GetKeyHash();
+			Key.Locale = Language.Key;
+			Key.Translation = Language.Value.Text;
+		}
+	}
+
+	bFetchInProgress = false;
+
+	RefreshTranslationData();
+}
+
+void UTolgeeLocalizationSubsystem::RefreshTranslationData()
 {
 	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeLocalizationSubsystem::RefreshTranslationData"));
-
-	TranslatedKeys = Translations;
 
 	AsyncTask(
 		ENamedThreads::AnyHiPriThreadHiPriTask,
@@ -210,8 +240,35 @@ void UTolgeeLocalizationSubsystem::RefreshTranslationData(TArray<FTolgeeKeyData>
 			UE_LOG(LogTolgee, Verbose, TEXT("Tolgee::LocalizationManager::RefreshResources"));
 
 			FTextLocalizationManager::Get().RefreshResources();
-
-			bFetchInProgress = false;
 		}
 	);
+}
+
+void UTolgeeLocalizationSubsystem::LoadLocalData()
+{
+	const FString Filename = TolgeeUtils::GetLocalizationSourceFile();
+	FString JsonString;
+	if (!FFileHelper::LoadFileToString(JsonString, *Filename))
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Couldn't load local data from file: %s"), *Filename);
+		return;
+	}
+
+	TSharedPtr<FJsonObject> JsonObject;
+	const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(JsonString);
+	if (!FJsonSerializer::Deserialize(JsonReader, JsonObject) || !JsonObject.IsValid())
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Couldn't deserialize local data from file: %s"), *Filename);
+		return;
+	}
+
+	if (!FJsonObjectConverter::JsonObjectToUStruct(JsonObject.ToSharedRef(), &LocalizedDictionary))
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Couldn't convert local data to struct from file: %s"), *Filename);
+		return;
+	}
+
+	UE_LOG(LogTolgee, Log, TEXT("Local data loaded successfully from file: %s"), *Filename);
+
+	RefreshTranslationData();
 }

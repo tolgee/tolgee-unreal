@@ -1,7 +1,8 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
 
 #include "TolgeeEditorIntegrationSubsystem.h"
 
+#include <HttpManager.h>
 #include <HttpModule.h>
 #include <Interfaces/IHttpRequest.h>
 #include <Interfaces/IHttpResponse.h>
@@ -13,8 +14,10 @@
 #include <LocalizationSettings.h>
 #include <LocalizationTargetTypes.h>
 #include <Misc/FeedbackContext.h>
+#include <Misc/FileHelper.h>
 #include <Misc/MessageDialog.h>
 #include <Serialization/JsonInternationalizationManifestSerializer.h>
+#include <Settings/ProjectPackagingSettings.h>
 
 #include "TolgeeEditor.h"
 #include "TolgeeLocalizationSubsystem.h"
@@ -28,7 +31,7 @@ namespace
 {
 	bool IsSameKey(const FTolgeeKeyData& A, const FLocalizationKey& B)
 	{
-		return A.KeyName == B.Key && A.KeyNamespace == B.Namespace && A.GetDefaultText() == B.DefaultText;
+		return A.KeyName == B.Key && A.KeyNamespace == B.Namespace && A.GetKeyHash() == TolgeeUtils::GetTranslationHash(B.DefaultText);
 	}
 } // namespace
 
@@ -52,8 +55,12 @@ void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 		return;
 	}
 
+	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
+	const FString DefaultLocale = Settings->Languages.Num() > 0 ? Settings->Languages[0] : TEXT("en");
+
+	TArray<TSharedPtr<FJsonValue>> Keys;
+
 	UE_LOG(LogTolgee, Log, TEXT("Upload request payload:"));
-	FKeysImportPayload Payload;
 	for (const auto& Key : MissingLocalKeys)
 	{
 		UE_LOG(LogTolgee, Log, TEXT("- namespace:%s key:%s default:%s"), *Key.Namespace, *Key.Key, *Key.DefaultText);
@@ -62,17 +69,24 @@ void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 		KeyItem.Name = Key.Key;
 		KeyItem.Namespace = Key.Namespace;
 
-		const FString OriginalTranslationTag = FString::Printf(TEXT("%s%s"), *TolgeeUtils::DefaultTextPrefix, *Key.DefaultText);
-		KeyItem.Tags.Emplace(OriginalTranslationTag);
+		const FString HashTag = FString::Printf(TEXT("%s%s"), *TolgeeUtils::KeyHashPrefix, *LexToString(TolgeeUtils::GetTranslationHash(Key.DefaultText)));
+		KeyItem.Tags.Emplace(HashTag);
 
-		const FString OriginalHashTag = FString::Printf(TEXT("%s%s"), *TolgeeUtils::KeyHashPrefix, *TolgeeUtils::GetTranslationHash(Key.DefaultText));
-		KeyItem.Tags.Emplace(OriginalHashTag);
+		TSharedPtr<FJsonObject> KeyObject = FJsonObjectConverter::UStructToJsonObject(KeyItem);
 
-		Payload.Keys.Add(KeyItem);
+		TSharedRef<FJsonObject> TranslationObject = MakeShareable(new FJsonObject);
+		TranslationObject->SetStringField(DefaultLocale, Key.DefaultText);
+		KeyObject->SetObjectField(TEXT("translations"), TranslationObject);
+
+		Keys.Add(MakeShared<FJsonValueObject>(KeyObject));
 	}
 
+	TSharedRef<FJsonObject> PayloadJson = MakeShared<FJsonObject>();
+	PayloadJson->SetArrayField(TEXT("keys"), Keys);
+
 	FString Json;
-	FJsonObjectConverter::UStructToJsonObjectString(Payload, Json);
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Json);
+	FJsonSerializer::Serialize(PayloadJson, Writer);
 
 	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetURL(TolgeeUtils::GetUrlEndpoint(TEXT("v2/projects/keys/import")));
@@ -278,7 +292,7 @@ void UTolgeeEditorIntegrationSubsystem::OnMissingKeysUploaded(FHttpRequestPtr Re
 	}
 	if (!EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 	{
-		UE_LOG(LogTolgee, Error, TEXT("Request to upload missing keys received unexpected code: %s"), *LexToString(Response->GetResponseCode()));
+		UE_LOG(LogTolgee, Error, TEXT("Request to upload missing keys received unexpected code: %s content: %s"), *LexToString(Response->GetResponseCode()), *Response->GetContentAsString());
 		return;
 	}
 
@@ -324,7 +338,7 @@ void UTolgeeEditorIntegrationSubsystem::OnUnusedKeysPurged(FHttpRequestPtr Reque
 	}
 	if (!EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 	{
-		UE_LOG(LogTolgee, Error, TEXT("Request to purge unused keys received unexpected code: %s"), *LexToString(Response->GetResponseCode()));
+		UE_LOG(LogTolgee, Error, TEXT("Request to purge unused keys received unexpected code: %s content: %s"), *LexToString(Response->GetResponseCode()), *Response->GetContentAsString());
 		return;
 	}
 
@@ -344,10 +358,60 @@ void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady()
 		TolgeeEditorModule.ActivateWindowTab();
 	}
 }
+void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
+{
+	const UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
+	while (LocalizationSubsystem->GetLocalizedDictionary().Keys.IsEmpty())
+	{
+		constexpr float SleepInterval = 0.1;
+
+		UE_LOG(LogTolgee, Display, TEXT("Waiting for translation data. Retrying in %s second."), *LexToString(SleepInterval));
+		FPlatformProcess::Sleep(SleepInterval);
+		FHttpModule::Get().GetHttpManager().Tick(SleepInterval);
+	}
+
+	UE_LOG(LogTolgee, Display, TEXT("Got translation data."));
+	const FLocalizedDictionary& Dictionary = LocalizationSubsystem->GetLocalizedDictionary();
+
+	FString JsonString;
+	if (!FJsonObjectConverter::UStructToJsonObjectString(Dictionary, JsonString))
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Couldn't convert the localized dictionary to string"));
+		return;
+	}
+
+	const FString Filename = TolgeeUtils::GetLocalizationSourceFile();
+	if (!FFileHelper::SaveStringToFile(JsonString, *Filename))
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Couldn't save the localized dictionary to file: %s"), *Filename);
+		return;
+	}
+
+	const FDirectoryPath TolgeeLocalizationPath = TolgeeUtils::GetLocalizationDirectory();
+	UProjectPackagingSettings* ProjectPackagingSettings = GetMutableDefault<UProjectPackagingSettings>();
+	const bool bContainsPath = ProjectPackagingSettings->DirectoriesToAlwaysStageAsNonUFS.ContainsByPredicate(
+		[TolgeeLocalizationPath](const FDirectoryPath& Path)
+		{
+			return Path.Path == TolgeeLocalizationPath.Path;
+		}
+	);
+
+	if (!bContainsPath)
+	{
+		ProjectPackagingSettings->DirectoriesToAlwaysStageAsNonUFS.Add(TolgeeLocalizationPath);
+		ProjectPackagingSettings->SaveConfig();
+	}
+
+
+	UE_LOG(LogTolgee, Display, TEXT("Localized dictionary succesfully saved to file: %s"), *Filename);
+}
 
 void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+
+	UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
+	LocalizationSubsystem->ManualFetch();
 
 	IMainFrameModule& MainFrameModule = IMainFrameModule::Get();
 	if (MainFrameModule.IsWindowInitialized())
@@ -363,6 +427,12 @@ void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Col
 				OnMainFrameReady();
 			}
 		);
+	}
+
+	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
+	if (IsRunningCookCommandlet() && !Settings->bLiveTranslationUpdates)
+	{
+		ExportLocalTranslations();
 	}
 }
 

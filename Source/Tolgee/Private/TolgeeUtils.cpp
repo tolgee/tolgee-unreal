@@ -2,15 +2,14 @@
 
 #include "TolgeeUtils.h"
 
-#include <Internationalization/TextLocalizationResource.h>
 #include <Interfaces/IPluginManager.h>
+#include <Internationalization/TextLocalizationResource.h>
 
 #include "TolgeeSettings.h"
 
-FString TolgeeUtils::GetTranslationHash(const FString& Translation)
+uint32 TolgeeUtils::GetTranslationHash(const FString& Translation)
 {
-	const uint32 TranslationHash = FTextLocalizationResource::HashString(Translation);
-	return LexToString(TranslationHash);
+	return FTextLocalizationResource::HashString(Translation);
 }
 
 FString TolgeeUtils::AppendQueryParameters(const FString& BaseUrl, const TArray<FString>& Parameters)
@@ -54,4 +53,16 @@ FString TolgeeUtils::GetSdkVersion()
 {
 	const TSharedPtr<IPlugin> TolgeePlugin = IPluginManager::Get().FindPlugin("Tolgee");
 	return TolgeePlugin->GetDescriptor().VersionName;
+}
+
+FString TolgeeUtils::GetLocalizationSourceFile()
+{
+	return FPaths::ProjectContentDir() + TEXT("Tolgee/Translations.json");
+}
+
+FDirectoryPath TolgeeUtils::GetLocalizationDirectory()
+{
+	FString Foldername = FPaths::GetPath(GetLocalizationSourceFile());
+	FPaths::MakePathRelativeTo(Foldername, *FPaths::ProjectContentDir());
+	return {Foldername};
 }

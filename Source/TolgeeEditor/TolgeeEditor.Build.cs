@@ -19,9 +19,11 @@ public class TolgeeEditor : ModuleRules
             new string[]
             {
                 "CoreUObject",
+                "DeveloperToolSettings",
                 "EditorSubsystem",
                 "Engine",
                 "HTTP",
+                "Json",
                 "JsonUtilities",
                 "Localization", 
                 "LocalizationCommandletExecution", 
