@@ -32,5 +32,9 @@ namespace TolgeeUtils
 	 */
 	FString TOLGEE_API GetSdkVersion();
 
+	FString TOLGEE_API GetLocalizationSourceFile();
+
+	FDirectoryPath TOLGEE_API GetLocalizationDirectory();
+
 	inline FString KeyHashPrefix = TEXT("OriginalHash:");
 } // namespace TolgeeUtils

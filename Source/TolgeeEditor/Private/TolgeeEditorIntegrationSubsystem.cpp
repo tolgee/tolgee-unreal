@@ -17,6 +17,8 @@
 #include <Misc/MessageDialog.h>
 #include <Serialization/JsonInternationalizationManifestSerializer.h>
 
+#include "HttpManager.h"
+#include "Settings/ProjectPackagingSettings.h"
 #include "TolgeeEditor.h"
 #include "TolgeeLocalizationSubsystem.h"
 #include "TolgeeLog.h"
@@ -360,13 +362,14 @@ void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady()
 }
 void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
 {
-	UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
-	LocalizationSubsystem->ManualFetch();
-
+	const UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
 	while (LocalizationSubsystem->GetLocalizedDictionary().Keys.IsEmpty())
 	{
-		UE_LOG(LogTolgee, Display, TEXT("Waiting for translation data. Retrying in 1 second."));
-		FPlatformProcess::Sleep(1.0f);
+		constexpr float SleepInterval = 0.1;
+
+		UE_LOG(LogTolgee, Display, TEXT("Waiting for translation data. Retrying in %s second."), *LexToString(SleepInterval));
+		FPlatformProcess::Sleep(SleepInterval);
+		FHttpModule::Get().GetHttpManager().Tick(SleepInterval);
 	}
 
 	UE_LOG(LogTolgee, Display, TEXT("Got translation data."));
@@ -379,14 +382,30 @@ void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
 		return;
 	}
 
-	FString Filename;
+	const FString Filename = TolgeeUtils::GetLocalizationSourceFile();
 	if (!FFileHelper::SaveStringToFile(JsonString, *Filename))
 	{
 		UE_LOG(LogTolgee, Error, TEXT("Couldn't save the localized dictionary to file: %s"), *Filename);
 		return;
 	}
 
-	UE_LOG(LogTolgee, Error, TEXT("Localized dictionary succesfully saved to file: %s"), *Filename);
+	const FDirectoryPath TolgeeLocalizationPath = TolgeeUtils::GetLocalizationDirectory();
+	UProjectPackagingSettings* ProjectPackagingSettings = GetMutableDefault<UProjectPackagingSettings>();
+	const bool bContainsPath = ProjectPackagingSettings->DirectoriesToAlwaysStageAsNonUFS.ContainsByPredicate(
+		[TolgeeLocalizationPath](const FDirectoryPath& Path)
+		{
+			return Path.Path == TolgeeLocalizationPath.Path;
+		}
+	);
+
+	if (!bContainsPath)
+	{
+		ProjectPackagingSettings->DirectoriesToAlwaysStageAsNonUFS.Add(TolgeeLocalizationPath);
+		ProjectPackagingSettings->SaveConfig();
+	}
+
+
+	UE_LOG(LogTolgee, Display, TEXT("Localized dictionary succesfully saved to file: %s"), *Filename);
 }
 
 void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -412,7 +431,8 @@ void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Col
 		);
 	}
 
-	if (IsRunningCookCommandlet())
+	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
+	if (IsRunningCookCommandlet() && !Settings->bLiveTranslationUpdates)
 	{
 		ExportLocalTranslations();
 	}

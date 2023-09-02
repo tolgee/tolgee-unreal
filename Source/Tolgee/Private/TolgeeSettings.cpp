@@ -110,7 +110,7 @@ void UTolgeeSettings::OnProjectIdFetched(FHttpRequestPtr Request, FHttpResponseP
 		return LexToString(ProjectIdValue);
 	}();
 
-	SaveConfig();
+	SaveToDefaultConfig();
 
 	FetchDefaultLanguages();
 }
@@ -164,7 +164,12 @@ void UTolgeeSettings::OnDefaultLanguagesFetched(FHttpRequestPtr Request, FHttpRe
 		Languages.Add(LanguageLocale);
 	}
 
-	SaveConfig();
+	SaveToDefaultConfig();
+}
+
+void UTolgeeSettings::SaveToDefaultConfig()
+{
+	SaveConfig(CPF_Config, *GetDefaultConfigFilename());
 }
 
 #endif

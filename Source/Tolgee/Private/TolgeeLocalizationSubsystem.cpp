@@ -44,7 +44,7 @@ void UTolgeeLocalizationSubsystem::GetLocalizedResources(
 	{
 		if (!InPrioritizedCultures.Contains(KeyData.Locale))
 		{
-			return;
+			continue;
 		}
 
 		const FTextKey InNamespace = KeyData.Namespace;
@@ -78,11 +78,10 @@ void UTolgeeLocalizationSubsystem::Initialize(FSubsystemCollectionBase& Collecti
 
 void UTolgeeLocalizationSubsystem::OnGameInstanceStart(UGameInstance* GameInstance)
 {
-	FetchTranslation();
-
 	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
 	if (Settings->bLiveTranslationUpdates)
 	{
+		FetchTranslation();
 		GameInstance->GetTimerManager().SetTimer(AutoFetchTimerHandle, this, &ThisClass::FetchTranslation, Settings->UpdateInterval, true);
 	}
 	else
@@ -104,7 +103,7 @@ void UTolgeeLocalizationSubsystem::FetchTranslation()
 
 	if (bFetchInProgress)
 	{
-		UE_LOG(LogTolgee, Verbose, TEXT("Fetch skipped, an update is already in progress."));
+		UE_LOG(LogTolgee, Log, TEXT("Fetch skipped, an update is already in progress."));
 		return;
 	}
 
@@ -149,12 +148,14 @@ void UTolgeeLocalizationSubsystem::OnNextTranslationFetched(
 
 	if (!bWasSuccessful)
 	{
+		bFetchInProgress = false;
 		UE_LOG(LogTolgee, Error, TEXT("Request to fetch translations was unsuccessful."));
 		return;
 	}
 
 	if (!EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 	{
+		bFetchInProgress = false;
 		UE_LOG(LogTolgee, Error, TEXT("Request to fetch translation received unexpected code: %s"), *LexToString(Response->GetResponseCode()));
 		return;
 	}
@@ -163,6 +164,7 @@ void UTolgeeLocalizationSubsystem::OnNextTranslationFetched(
 	const TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(Response->GetContentAsString());
 	if (!FJsonSerializer::Deserialize(JsonReader, JsonObject))
 	{
+		bFetchInProgress = false;
 		UE_LOG(LogTolgee, Error, TEXT("Could not deserialize response: %s"), *LexToString(Response->GetContentAsString()));
 		return;
 	}
@@ -203,6 +205,8 @@ void UTolgeeLocalizationSubsystem::OnNextTranslationFetched(
 
 void UTolgeeLocalizationSubsystem::OnAllTranslationsFetched(TArray<FTolgeeKeyData> Translations)
 {
+	LocalizedDictionary.Keys.Empty();
+
 	for (const FTolgeeKeyData& Translation : Translations)
 	{
 		for (const TTuple<FString, FTolgeeTranslation>& Language : Translation.Translations)
@@ -215,6 +219,8 @@ void UTolgeeLocalizationSubsystem::OnAllTranslationsFetched(TArray<FTolgeeKeyDat
 			Key.Translation = Language.Value.Text;
 		}
 	}
+
+	bFetchInProgress = false;
 
 	RefreshTranslationData();
 }
@@ -232,15 +238,13 @@ void UTolgeeLocalizationSubsystem::RefreshTranslationData()
 			UE_LOG(LogTolgee, Verbose, TEXT("Tolgee::LocalizationManager::RefreshResources"));
 
 			FTextLocalizationManager::Get().RefreshResources();
-
-			bFetchInProgress = false;
 		}
 	);
 }
 
 void UTolgeeLocalizationSubsystem::LoadLocalData()
 {
-	FString Filename;
+	const FString Filename = TolgeeUtils::GetLocalizationSourceFile();
 	FString JsonString;
 	if (!FFileHelper::LoadFileToString(JsonString, *Filename))
 	{

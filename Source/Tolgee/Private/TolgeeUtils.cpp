@@ -54,3 +54,15 @@ FString TolgeeUtils::GetSdkVersion()
 	const TSharedPtr<IPlugin> TolgeePlugin = IPluginManager::Get().FindPlugin("Tolgee");
 	return TolgeePlugin->GetDescriptor().VersionName;
 }
+
+FString TolgeeUtils::GetLocalizationSourceFile()
+{
+	return FPaths::ProjectContentDir() + TEXT("Tolgee/Translations.json");
+}
+
+FDirectoryPath TolgeeUtils::GetLocalizationDirectory()
+{
+	FString Foldername = FPaths::GetPath(GetLocalizationSourceFile());
+	FPaths::MakePathRelativeTo(Foldername, *FPaths::ProjectContentDir());
+	return {Foldername};
+}
