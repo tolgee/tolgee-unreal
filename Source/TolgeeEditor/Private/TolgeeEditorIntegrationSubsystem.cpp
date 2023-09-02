@@ -2,6 +2,7 @@
 
 #include "TolgeeEditorIntegrationSubsystem.h"
 
+#include <HttpManager.h>
 #include <HttpModule.h>
 #include <Interfaces/IHttpRequest.h>
 #include <Interfaces/IHttpResponse.h>
@@ -16,9 +17,8 @@
 #include <Misc/FileHelper.h>
 #include <Misc/MessageDialog.h>
 #include <Serialization/JsonInternationalizationManifestSerializer.h>
+#include <Settings/ProjectPackagingSettings.h>
 
-#include "HttpManager.h"
-#include "Settings/ProjectPackagingSettings.h"
 #include "TolgeeEditor.h"
 #include "TolgeeLocalizationSubsystem.h"
 #include "TolgeeLog.h"
@@ -37,7 +37,6 @@ namespace
 
 void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 {
-	// TODO: Run a fetch before
 	TArray<FLocalizationKey> MissingLocalKeys = GetMissingLocalKeys();
 
 	if (MissingLocalKeys.IsEmpty())
@@ -103,7 +102,6 @@ void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 
 void UTolgeeEditorIntegrationSubsystem::PurgeUnusedKeys()
 {
-	// TODO: Run a fetch before
 	TArray<FTolgeeKeyData> UnusedRemoteKeys = GetUnusedRemoteKeys();
 
 	if (UnusedRemoteKeys.IsEmpty())

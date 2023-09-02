@@ -31,9 +31,14 @@ namespace TolgeeUtils
 	 * @brief Sdk version of the Tolgee integration
 	 */
 	FString TOLGEE_API GetSdkVersion();
-
+	/**
+	 * @brief Returns the path to the file on disk where the localization is stored (Tolgee.json)
+	 */
 	FString TOLGEE_API GetLocalizationSourceFile();
-
+	/**
+	 * @brief Returns the Directory path where the localization file is stored
+	 * @note used by the Tolgee Editor Susbstem to inject this into the folders staged inside the .pak file
+	 */
 	FDirectoryPath TOLGEE_API GetLocalizationDirectory();
 
 	inline FString KeyHashPrefix = TEXT("OriginalHash:");
