@@ -9,6 +9,8 @@
 #include <Interfaces/IHttpResponse.h>
 #include <Internationalization/TextLocalizationResource.h>
 #include <JsonObjectConverter.h>
+#include <Misc/FileHelper.h>
+#include <Misc/Paths.h>
 #include <Serialization/JsonReader.h>
 #include <Serialization/JsonSerializer.h>
 #include <TimerManager.h>
