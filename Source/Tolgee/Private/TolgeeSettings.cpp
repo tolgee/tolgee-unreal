@@ -60,6 +60,7 @@ void UTolgeeSettings::PostEditChangeProperty(FPropertyChangedEvent& PropertyChan
 		FetchProjectId();
 	}
 }
+#endif
 
 void UTolgeeSettings::FetchProjectId()
 {
@@ -171,5 +172,3 @@ void UTolgeeSettings::SaveToDefaultConfig()
 {
 	SaveConfig(CPF_Config, *GetDefaultConfigFilename());
 }
-
-#endif

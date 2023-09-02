@@ -87,6 +87,8 @@ private:
 	 * @brief Callback executed when the language information about the current project is retrieved
 	 */
 	void OnDefaultLanguagesFetched(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
-
+	/**
+	 * @brief Saves the current values to the .ini file inside root Config folder
+	 */
 	void SaveToDefaultConfig();
 };
