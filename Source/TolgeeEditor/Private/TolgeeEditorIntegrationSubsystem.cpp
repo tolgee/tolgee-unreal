@@ -422,7 +422,7 @@ void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Col
 	{
 		MainFrameModule.OnMainFrameCreationFinished().AddWeakLambda(
 			this,
-			[=](TSharedPtr<SWindow> InRootWindow, bool bIsRunningStartupDialog)
+			[=, this](TSharedPtr<SWindow> InRootWindow, bool bIsRunningStartupDialog)
 			{
 				OnMainFrameReady();
 			}
