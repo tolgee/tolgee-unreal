@@ -67,7 +67,7 @@ void UTolgeeSettings::FetchProjectId()
 	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeSettings::FetchProjectId"));
 
 	const FString RequestUrl = TolgeeUtils::GetUrlEndpoint(TEXT("v2/api-keys/current"));
-	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
+	const FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetVerb("GET");
 	HttpRequest->SetHeader(TEXT("X-API-Key"), ApiKey);
 	HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Type"), TolgeeUtils::GetSdkType());
@@ -121,7 +121,7 @@ void UTolgeeSettings::FetchDefaultLanguages()
 	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeSettings::FetchDefaultLanguages"));
 
 	const FString RequestUrl = TolgeeUtils::GetUrlEndpoint(TEXT("v2/projects/stats"));
-	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
+	const FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetVerb("GET");
 	HttpRequest->SetHeader(TEXT("X-API-Key"), ApiKey);
 	HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Type"), TolgeeUtils::GetSdkType());

@@ -41,5 +41,5 @@ namespace TolgeeUtils
 	 */
 	FDirectoryPath TOLGEE_API GetLocalizationDirectory();
 
-	inline FString KeyHashPrefix = TEXT("OriginalHash:");
+	const FString KeyHashPrefix = TEXT("OriginalHash:");
 } // namespace TolgeeUtils

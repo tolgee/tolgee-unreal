@@ -10,7 +10,7 @@
 /**
  * Holds configuration for integrating the Tolgee localization source
  */
-UCLASS(Config = Tolgee, DefaultConfig)
+UCLASS(Config = Tolgee, defaultconfig)
 class TOLGEE_API UTolgeeSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()

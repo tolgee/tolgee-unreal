@@ -127,7 +127,7 @@ void UTolgeeLocalizationSubsystem::FetchNextTranslation(FOnTranslationFetched Ca
 
 	const FString EndpointUrl = TolgeeUtils::GetUrlEndpoint(TEXT("v2/projects/translations"));
 	const FString RequestUrl = TolgeeUtils::AppendQueryParameters(EndpointUrl, QueryParameters);
-	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
+	const FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetVerb("GET");
 	HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
 	HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Type"), TolgeeUtils::GetSdkType());
