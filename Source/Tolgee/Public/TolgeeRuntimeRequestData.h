@@ -136,6 +136,10 @@ struct FLocalizedKey
 	 */
 	UPROPERTY()
 	FString Translation;
+	/**
+	 * Unique id used by the Tolgee backend to identify the key.
+	 */
+	TOptional<int64> RemoteId;
 };
 
 /**
