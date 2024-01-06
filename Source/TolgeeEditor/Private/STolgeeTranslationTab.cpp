@@ -6,6 +6,7 @@
 #include <Engine/Canvas.h>
 #include <SWebBrowser.h>
 #include <DrawDebugHelpers.h>
+#include <Misc/EngineVersionComparison.h>
 
 #include "TolgeeLocalizationSubsystem.h"
 #include "TolgeeLog.h"
@@ -59,7 +60,13 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 
 	TSharedPtr<SViewport> GameViewportWidget = GEngine->GameViewport->GetGameViewportWidget();
 
-	if (WidgetPath.Widgets.Num() > 0 && GameViewportWidget.IsValid() && WidgetPath.ContainsWidget(GameViewportWidget.ToSharedRef()))
+#if UE_VERSION_NEWER_THAN(5, 0, 0)
+	const bool bValidHover = WidgetPath.Widgets.Num() > 0 && WidgetPath.ContainsWidget(GameViewportWidget.Get());
+#else
+	const bool bValidHover = WidgetPath.Widgets.Num() > 0 && GameViewportWidget.IsValid() && WidgetPath.ContainsWidget(GameViewportWidget.ToSharedRef());
+#endif
+
+	if (bValidHover)
 	{
 		TSharedPtr<SWidget> CurrentHoveredWidget = WidgetPath.GetLastWidget();
 		if (CurrentHoveredWidget->GetType() == STextBlockType)
