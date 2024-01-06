@@ -15,6 +15,7 @@
 #include <LocalizationTargetTypes.h>
 #include <Misc/FeedbackContext.h>
 #include <Misc/FileHelper.h>
+#include <Misc/EngineVersionComparison.h>
 #include <Misc/MessageDialog.h>
 #include <Serialization/JsonInternationalizationManifestSerializer.h>
 #include <Settings/ProjectPackagingSettings.h>
@@ -355,6 +356,8 @@ void UTolgeeEditorIntegrationSubsystem::OnUnusedKeysPurged(FHttpRequestPtr Reque
 
 void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady()
 {
+	// The browser plugin CEF version is too old to render the Tolgee website before 5.0
+#if UE_VERSION_NEWER_THAN(5, 0, 0)
 	const UTolgeeSettings* TolgeeSettings = GetDefault<UTolgeeSettings>();
 
 	// If the API Key is not set in the settings, the user has not completed the setup, therefore we will our welcome tab.
@@ -363,6 +366,7 @@ void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady()
 		FTolgeeEditorModule& TolgeeEditorModule = FTolgeeEditorModule::Get();
 		TolgeeEditorModule.ActivateWindowTab();
 	}
+#endif
 }
 void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
 {

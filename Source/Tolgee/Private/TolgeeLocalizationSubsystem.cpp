@@ -10,10 +10,10 @@
 #include <Internationalization/TextLocalizationResource.h>
 #include <JsonObjectConverter.h>
 #include <Misc/FileHelper.h>
-#include <Misc/Paths.h>
 #include <Serialization/JsonReader.h>
 #include <Serialization/JsonSerializer.h>
 #include <TimerManager.h>
+#include <Misc/EngineVersionComparison.h>
 
 #include "TolgeeLog.h"
 #include "TolgeeRuntimeRequestData.h"
@@ -66,7 +66,25 @@ void UTolgeeLocalizationSubsystem::Initialize(FSubsystemCollectionBase& Collecti
 
 	Super::Initialize(Collection);
 
+	// OnGameInstanceStart was introduced in 4.27, so we are trying to mimic the behavior for older version
+#if UE_VERSION_OLDER_THAN(4, 27, 0)
+	UGameViewportClient::OnViewportCreated().AddWeakLambda(this, [this]()
+	{
+		const UGameViewportClient* ViewportClient = GEngine ? GEngine->GameViewport : nullptr;
+		UGameInstance* GameInstance = ViewportClient ? ViewportClient->GetGameInstance() : nullptr;
+		if(GameInstance)
+		{
+			UE_LOG(LogTolgee, Log, TEXT("Workaround for OnGameInstanceStart"));
+			OnGameInstanceStart(GameInstance);
+		}
+		else
+		{
+			UE_LOG(LogTolgee, Error, TEXT("Workaround for OnGameInstanceStart failed"));
+		}
+	});
+#else
 	FWorldDelegates::OnStartGameInstance.AddUObject(this, &ThisClass::OnGameInstanceStart);
+#endif
 
 	TextSource = MakeShared<FTolgeeTextSource>();
 	TextSource->GetLocalizedResources.BindUObject(this, &ThisClass::GetLocalizedResources);

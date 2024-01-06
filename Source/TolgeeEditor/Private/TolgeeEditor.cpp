@@ -1,10 +1,10 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
 
 #include "TolgeeEditor.h"
 
 #include <LevelEditor.h>
+#include <Interfaces/IPluginManager.h>
 
-#include "Interfaces/IPluginManager.h"
 #include "STolgeeTranslationTab.h"
 #include "TolgeeEditorIntegrationSubsystem.h"
 #include "TolgeeLocalizationSubsystem.h"
