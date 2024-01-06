@@ -1,10 +1,10 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
 
 #include "TolgeeEditor.h"
 
 #include <LevelEditor.h>
+#include <Interfaces/IPluginManager.h>
 
-#include "Interfaces/IPluginManager.h"
 #include "STolgeeTranslationTab.h"
 #include "TolgeeEditorIntegrationSubsystem.h"
 #include "TolgeeLocalizationSubsystem.h"
@@ -87,8 +87,14 @@ void FTolgeeEditorModule::RegisterToolbarExtension()
 	FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor");
 	const TSharedPtr<FExtensibilityManager> ExtensionManager = LevelEditorModule.GetToolBarExtensibilityManager();
 
+#if ENGINE_MAJOR_VERSION > 4
+	const FName ToolbarHook = TEXT("ProjectSettings");
+#else
+	const FName ToolbarHook = TEXT("Settings");
+#endif
+
 	ToolbarExtender = MakeShareable(new FExtender);
-	ToolbarExtender->AddToolBarExtension(TEXT("ProjectSettings"), EExtensionHook::First, nullptr, FToolBarExtensionDelegate::CreateRaw(this, &FTolgeeEditorModule::ExtendToolbar));
+	ToolbarExtender->AddToolBarExtension(ToolbarHook, EExtensionHook::First, nullptr, FToolBarExtensionDelegate::CreateRaw(this, &FTolgeeEditorModule::ExtendToolbar));
 	ExtensionManager->AddExtender(ToolbarExtender);
 }
 

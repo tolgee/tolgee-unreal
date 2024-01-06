@@ -1,4 +1,4 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
 
 #pragma once
 
@@ -28,11 +28,8 @@ public:
 	/**
 	 * @brief Immediately sends a fetch request to grab the latest data
 	 */
+	UFUNCTION(BlueprintCallable, Category = "Tolgee Localization")
 	void ManualFetch();
-	/**
-	 * @brief Returns the result of the last fetch operation
-	 */
-	const TArray<FTolgeeKeyData>& GetLastFetchedKeys() const;
 	/**
 	 * @brief Returns the localized dictionary used the the TolgeeTextSource
 	 */
@@ -94,10 +91,6 @@ private:
 	 * @note Could be coming from the Tolgee backend or locally saved
 	 */
 	FLocalizedDictionary LocalizedDictionary;
-	/**
-	 * @brief Cached response of the last successfully fetched keys.
-	 */
-	TArray<FTolgeeKeyData> TranslatedKeys;
 	/**
 	 * @brief Timer responsible for periodically fetching the latest keys.
 	 */

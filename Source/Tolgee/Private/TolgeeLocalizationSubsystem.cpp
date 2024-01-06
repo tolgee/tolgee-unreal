@@ -10,10 +10,10 @@
 #include <Internationalization/TextLocalizationResource.h>
 #include <JsonObjectConverter.h>
 #include <Misc/FileHelper.h>
-#include <Misc/Paths.h>
 #include <Serialization/JsonReader.h>
 #include <Serialization/JsonSerializer.h>
 #include <TimerManager.h>
+#include <Misc/EngineVersionComparison.h>
 
 #include "TolgeeLog.h"
 #include "TolgeeRuntimeRequestData.h"
@@ -26,11 +26,6 @@ void UTolgeeLocalizationSubsystem::ManualFetch()
 	UE_LOG(LogTolgee, Log, TEXT("UTolgeeLocalizationSubsystem::ManualFetch"));
 
 	FetchTranslation();
-}
-
-const TArray<FTolgeeKeyData>& UTolgeeLocalizationSubsystem::GetLastFetchedKeys() const
-{
-	return TranslatedKeys;
 }
 
 const FLocalizedDictionary& UTolgeeLocalizationSubsystem::GetLocalizedDictionary() const
@@ -71,7 +66,25 @@ void UTolgeeLocalizationSubsystem::Initialize(FSubsystemCollectionBase& Collecti
 
 	Super::Initialize(Collection);
 
+	// OnGameInstanceStart was introduced in 4.27, so we are trying to mimic the behavior for older version
+#if UE_VERSION_OLDER_THAN(4, 27, 0)
+	UGameViewportClient::OnViewportCreated().AddWeakLambda(this, [this]()
+	{
+		const UGameViewportClient* ViewportClient = GEngine ? GEngine->GameViewport : nullptr;
+		UGameInstance* GameInstance = ViewportClient ? ViewportClient->GetGameInstance() : nullptr;
+		if(GameInstance)
+		{
+			UE_LOG(LogTolgee, Log, TEXT("Workaround for OnGameInstanceStart"));
+			OnGameInstanceStart(GameInstance);
+		}
+		else
+		{
+			UE_LOG(LogTolgee, Error, TEXT("Workaround for OnGameInstanceStart failed"));
+		}
+	});
+#else
 	FWorldDelegates::OnStartGameInstance.AddUObject(this, &ThisClass::OnGameInstanceStart);
+#endif
 
 	TextSource = MakeShared<FTolgeeTextSource>();
 	TextSource->GetLocalizedResources.BindUObject(this, &ThisClass::GetLocalizedResources);
@@ -132,7 +145,7 @@ void UTolgeeLocalizationSubsystem::FetchNextTranslation(FOnTranslationFetched Ca
 
 	const FString EndpointUrl = TolgeeUtils::GetUrlEndpoint(TEXT("v2/projects/translations"));
 	const FString RequestUrl = TolgeeUtils::AppendQueryParameters(EndpointUrl, QueryParameters);
-	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
+	const FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetVerb("GET");
 	HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
 	HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Type"), TolgeeUtils::GetSdkType());
@@ -219,6 +232,7 @@ void UTolgeeLocalizationSubsystem::OnAllTranslationsFetched(TArray<FTolgeeKeyDat
 			Key.Hash = Translation.GetKeyHash();
 			Key.Locale = Language.Key;
 			Key.Translation = Language.Value.Text;
+			Key.RemoteId = Translation.KeyId;
 		}
 	}
 

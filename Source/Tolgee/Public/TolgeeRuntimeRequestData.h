@@ -6,9 +6,11 @@
 
 #include "TolgeeRuntimeRequestData.generated.h"
 
+class FJsonValue;
+
 /**
  * @brief Representation of a Tolgee tag
- * @see https://tolgee.io/platform/translation_keys/tags
+ * @see https://tolgee.io/platform/translation_keys/tags
  */
 USTRUCT()
 struct TOLGEE_API FTolgeeKeyTag
@@ -136,6 +138,10 @@ struct FLocalizedKey
 	 */
 	UPROPERTY()
 	FString Translation;
+	/**
+	 * Unique id used by the Tolgee backend to identify the key.
+	 */
+	TOptional<int64> RemoteId;
 };
 
 /**

@@ -10,6 +10,7 @@
 
 #include "TolgeeEditorIntegrationSubsystem.generated.h"
 
+struct FLocalizedKey;
 struct FTolgeeKeyData;
 
 class ULocalizationTarget;
@@ -58,7 +59,7 @@ private:
 	/**
 	 * @brief Determine which remote keys are not present in the local configuration
 	 */
-	TArray<FTolgeeKeyData> GetUnusedRemoteKeys() const;
+	TArray<FLocalizedKey> GetUnusedRemoteKeys() const;
 	/**
 	 * @brief Callback executed when the keys deleted from the Tolgee backend is completed
 	 */
