@@ -1,4 +1,4 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
 
 #pragma once
 
@@ -28,6 +28,7 @@ public:
 	/**
 	 * @brief Immediately sends a fetch request to grab the latest data
 	 */
+	UFUNCTION(BlueprintCallable)
 	void ManualFetch();
 	/**
 	 * @brief Returns the localized dictionary used the the TolgeeTextSource
