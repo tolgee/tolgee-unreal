@@ -29,9 +29,9 @@
 
 namespace
 {
-	bool IsSameKey(const FTolgeeKeyData& A, const FLocalizationKey& B)
+	bool IsSameKey(const FLocalizedKey& A, const FLocalizationKey& B)
 	{
-		return A.KeyName == B.Key && A.KeyNamespace == B.Namespace && A.GetKeyHash() == TolgeeUtils::GetTranslationHash(B.DefaultText);
+		return A.Name == B.Key && A.Namespace == B.Namespace && A.Hash == TolgeeUtils::GetTranslationHash(B.DefaultText);
 	}
 } // namespace
 
@@ -102,7 +102,7 @@ void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 
 void UTolgeeEditorIntegrationSubsystem::PurgeUnusedKeys()
 {
-	TArray<FTolgeeKeyData> UnusedRemoteKeys = GetUnusedRemoteKeys();
+	TArray<FLocalizedKey> UnusedRemoteKeys = GetUnusedRemoteKeys();
 
 	if (UnusedRemoteKeys.IsEmpty())
 	{
@@ -124,9 +124,15 @@ void UTolgeeEditorIntegrationSubsystem::PurgeUnusedKeys()
 	FKeysDeletePayload Payload;
 	for (const auto& Key : UnusedRemoteKeys)
 	{
-		UE_LOG(LogTolgee, Log, TEXT("- id:%s namespace:%s key:%s"), *LexToString(Key.KeyId), *Key.KeyNamespace, *Key.KeyName);
-
-		Payload.Ids.Add(Key.KeyId);
+		if(Key.RemoteId.IsSet())
+		{
+			UE_LOG(LogTolgee, Log, TEXT("- id:%s namespace:%s key:%s"), *LexToString(Key.RemoteId.GetValue()), *Key.Namespace, *Key.Name);
+			Payload.Ids.Add(Key.RemoteId.GetValue());
+		}
+		else
+		{
+			UE_LOG(LogTolgee, Warning, TEXT("- namespace:%s key:%s -> Cannot be deleted: Invalid id."), *Key.Namespace, *Key.Name);
+		}
 	}
 
 	FString Json;
@@ -147,15 +153,15 @@ void UTolgeeEditorIntegrationSubsystem::PurgeUnusedKeys()
 TArray<FLocalizationKey> UTolgeeEditorIntegrationSubsystem::GetMissingLocalKeys() const
 {
 	const UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
-	const TArray<FTolgeeKeyData> RemoteKeys = LocalizationSubsystem->GetLastFetchedKeys();
+	const FLocalizedDictionary RemoteKeys = LocalizationSubsystem->GetLocalizedDictionary();
 
 	TArray<FLocalizationKey> LocalKeys = GatherLocalKeys();
 
 	for (auto It = LocalKeys.CreateIterator(); It; ++It)
 	{
 		const FLocalizationKey& LocalizationKey = *It;
-		const bool bFoundLocally = RemoteKeys.ContainsByPredicate(
-			[LocalizationKey](const FTolgeeKeyData& Key)
+		const bool bFoundLocally = RemoteKeys.Keys.ContainsByPredicate(
+			[LocalizationKey](const FLocalizedKey& Key)
 			{
 				return IsSameKey(Key, LocalizationKey);
 			}
@@ -301,16 +307,16 @@ void UTolgeeEditorIntegrationSubsystem::OnMissingKeysUploaded(FHttpRequestPtr Re
 	GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>()->ManualFetch();
 }
 
-TArray<FTolgeeKeyData> UTolgeeEditorIntegrationSubsystem::GetUnusedRemoteKeys() const
+TArray<FLocalizedKey> UTolgeeEditorIntegrationSubsystem::GetUnusedRemoteKeys() const
 {
 	const UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
-	TArray<FTolgeeKeyData> RemoteKeys = LocalizationSubsystem->GetLastFetchedKeys();
+	FLocalizedDictionary RemoteKeys = LocalizationSubsystem->GetLocalizedDictionary();
 
-	const TArray<FLocalizationKey> LocalKeys = GatherLocalKeys();
+	TArray<FLocalizationKey> LocalKeys = GatherLocalKeys();
 
-	for (auto It = RemoteKeys.CreateIterator(); It; ++It)
+	for (auto It = RemoteKeys.Keys.CreateIterator(); It; ++It)
 	{
-		const FTolgeeKeyData& TolgeeKey = *It;
+		const FLocalizedKey& TolgeeKey = *It;
 		const bool bFoundLocally = LocalKeys.ContainsByPredicate(
 			[TolgeeKey](const FLocalizationKey& Key)
 			{
@@ -324,7 +330,7 @@ TArray<FTolgeeKeyData> UTolgeeEditorIntegrationSubsystem::GetUnusedRemoteKeys() 
 		}
 	}
 
-	return RemoteKeys;
+	return RemoteKeys.Keys;
 }
 
 void UTolgeeEditorIntegrationSubsystem::OnUnusedKeysPurged(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)

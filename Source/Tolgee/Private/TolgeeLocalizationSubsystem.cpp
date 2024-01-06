@@ -28,11 +28,6 @@ void UTolgeeLocalizationSubsystem::ManualFetch()
 	FetchTranslation();
 }
 
-const TArray<FTolgeeKeyData>& UTolgeeLocalizationSubsystem::GetLastFetchedKeys() const
-{
-	return TranslatedKeys;
-}
-
 const FLocalizedDictionary& UTolgeeLocalizationSubsystem::GetLocalizedDictionary() const
 {
 	return LocalizedDictionary;
@@ -219,6 +214,7 @@ void UTolgeeLocalizationSubsystem::OnAllTranslationsFetched(TArray<FTolgeeKeyDat
 			Key.Hash = Translation.GetKeyHash();
 			Key.Locale = Language.Key;
 			Key.Translation = Language.Value.Text;
+			Key.RemoteId = Translation.KeyId;
 		}
 	}
 
