@@ -6,8 +6,6 @@ public class TolgeeEditor : ModuleRules
 {
     public TolgeeEditor(ReadOnlyTargetRules Target) : base(Target)
     {
-        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
@@ -19,7 +17,6 @@ public class TolgeeEditor : ModuleRules
             new string[]
             {
                 "CoreUObject",
-                "DeveloperToolSettings",
                 "EditorSubsystem",
                 "Engine",
                 "HTTP",
@@ -27,14 +24,25 @@ public class TolgeeEditor : ModuleRules
                 "JsonUtilities",
                 "Localization", 
                 "LocalizationCommandletExecution", 
+                "MainFrame",
                 "Projects",
                 "Slate",
                 "SlateCore", 
                 "UnrealEd", 
                 "WebBrowser",
-                
+
                 "Tolgee"
             }
         );
+
+        if (Target.Version.MajorVersion > 4)
+        {
+            PrivateDependencyModuleNames.AddRange(
+                new string[]
+                {
+                    "DeveloperToolSettings",
+                }
+            );
+        }
     }
 }

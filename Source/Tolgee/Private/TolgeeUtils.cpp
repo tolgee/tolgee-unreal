@@ -4,6 +4,7 @@
 
 #include <Interfaces/IPluginManager.h>
 #include <Internationalization/TextLocalizationResource.h>
+#include <Misc/Paths.h>
 
 #include "TolgeeSettings.h"
 

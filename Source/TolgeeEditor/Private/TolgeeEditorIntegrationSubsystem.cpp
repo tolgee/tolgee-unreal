@@ -15,6 +15,7 @@
 #include <LocalizationTargetTypes.h>
 #include <Misc/FeedbackContext.h>
 #include <Misc/FileHelper.h>
+#include <Misc/EngineVersionComparison.h>
 #include <Misc/MessageDialog.h>
 #include <Serialization/JsonInternationalizationManifestSerializer.h>
 #include <Settings/ProjectPackagingSettings.h>
@@ -39,7 +40,7 @@ void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 {
 	TArray<FLocalizationKey> MissingLocalKeys = GetMissingLocalKeys();
 
-	if (MissingLocalKeys.IsEmpty())
+	if (MissingLocalKeys.Num() == 0)
 	{
 		const FText NoKeysToUpload = LOCTEXT("NoKeysToUpload", "No Keys found to upload");
 		FMessageDialog::Open(EAppMsgType::Ok, NoKeysToUpload);
@@ -88,7 +89,7 @@ void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Json);
 	FJsonSerializer::Serialize(PayloadJson, Writer);
 
-	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
+	const FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetURL(TolgeeUtils::GetUrlEndpoint(TEXT("v2/projects/keys/import")));
 	HttpRequest->SetVerb("POST");
 	HttpRequest->SetHeader(TEXT("X-API-Key"), GetDefault<UTolgeeSettings>()->ApiKey);
@@ -104,7 +105,7 @@ void UTolgeeEditorIntegrationSubsystem::PurgeUnusedKeys()
 {
 	TArray<FLocalizedKey> UnusedRemoteKeys = GetUnusedRemoteKeys();
 
-	if (UnusedRemoteKeys.IsEmpty())
+	if (UnusedRemoteKeys.Num() == 0)
 	{
 		const FText NoKeysToPurge = LOCTEXT("NoKeysToPurge", "No keys found to purge");
 		FMessageDialog::Open(EAppMsgType::Ok, NoKeysToPurge);
@@ -138,7 +139,7 @@ void UTolgeeEditorIntegrationSubsystem::PurgeUnusedKeys()
 	FString Json;
 	FJsonObjectConverter::UStructToJsonObjectString(Payload, Json);
 
-	const TSharedRef<IHttpRequest> HttpRequest = FHttpModule::Get().CreateRequest();
+	const FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetURL(TolgeeUtils::GetUrlEndpoint(TEXT("v2/projects/keys")));
 	HttpRequest->SetVerb("DELETE");
 	HttpRequest->SetHeader(TEXT("X-API-Key"), GetDefault<UTolgeeSettings>()->ApiKey);
@@ -179,7 +180,7 @@ TArray<FLocalizationKey> UTolgeeEditorIntegrationSubsystem::GetMissingLocalKeys(
 TArray<FLocalizationKey> UTolgeeEditorIntegrationSubsystem::GatherLocalKeys() const
 {
 	TArray<ULocalizationTarget*> TargetObjectsToProcess = GatherValidLocalizationTargets();
-	if (TargetObjectsToProcess.IsEmpty())
+	if (TargetObjectsToProcess.Num() == 0)
 	{
 		UE_LOG(LogTolgee, Error, TEXT("No valid TargetObjects found in GetGameTargetSet."));
 		return {};
@@ -253,8 +254,7 @@ TArray<ULocalizationTarget*> UTolgeeEditorIntegrationSubsystem::GatherValidLocal
 		if (LocalizationTarget)
 		{
 			const FLocalizationTargetSettings& LocalizationSettings = LocalizationTarget->Settings;
-			const bool bValidCulture =
-				!LocalizationSettings.SupportedCulturesStatistics.IsEmpty() && LocalizationSettings.SupportedCulturesStatistics.IsValidIndex(LocalizationSettings.NativeCultureIndex);
+			const bool bValidCulture = LocalizationSettings.SupportedCulturesStatistics.IsValidIndex(LocalizationSettings.NativeCultureIndex);
 			if (!bValidCulture)
 			{
 				UE_LOG(LogTolgee, Warning, TEXT("Skipping: %s -> Invalid default culture"), *LocalizationTarget->Settings.Name);
@@ -355,6 +355,8 @@ void UTolgeeEditorIntegrationSubsystem::OnUnusedKeysPurged(FHttpRequestPtr Reque
 
 void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady()
 {
+	// The browser plugin CEF version is too old to render the Tolgee website before 5.0
+#if UE_VERSION_NEWER_THAN(5, 0, 0)
 	const UTolgeeSettings* TolgeeSettings = GetDefault<UTolgeeSettings>();
 
 	// If the API Key is not set in the settings, the user has not completed the setup, therefore we will our welcome tab.
@@ -363,11 +365,12 @@ void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady()
 		FTolgeeEditorModule& TolgeeEditorModule = FTolgeeEditorModule::Get();
 		TolgeeEditorModule.ActivateWindowTab();
 	}
+#endif
 }
 void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
 {
 	const UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
-	while (LocalizationSubsystem->GetLocalizedDictionary().Keys.IsEmpty())
+	while (LocalizationSubsystem->GetLocalizedDictionary().Keys.Num() == 0)
 	{
 		constexpr float SleepInterval = 0.1;
 
@@ -428,15 +431,22 @@ void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Col
 	{
 		MainFrameModule.OnMainFrameCreationFinished().AddWeakLambda(
 			this,
-			[=, this](TSharedPtr<SWindow> InRootWindow, bool bIsRunningStartupDialog)
+			[=](TSharedPtr<SWindow> InRootWindow, bool bIsRunningStartupDialog)
 			{
 				OnMainFrameReady();
 			}
 		);
 	}
 
+#if ENGINE_MAJOR_VERSION > 4
+	const bool bIsRunningCookCommandlet = IsRunningCookCommandlet();
+#else
+	const FString Commandline = FCommandLine::Get();
+	const bool bIsRunningCookCommandlet = IsRunningCommandlet() && Commandline.Contains(TEXT("run=cook"));
+#endif
+
 	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
-	if (IsRunningCookCommandlet() && !Settings->bLiveTranslationUpdates)
+	if (bIsRunningCookCommandlet && !Settings->bLiveTranslationUpdates)
 	{
 		ExportLocalTranslations();
 	}

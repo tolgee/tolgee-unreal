@@ -5,6 +5,8 @@
 #include <Debug/DebugDrawService.h>
 #include <Engine/Canvas.h>
 #include <SWebBrowser.h>
+#include <DrawDebugHelpers.h>
+#include <Misc/EngineVersionComparison.h>
 
 #include "TolgeeLocalizationSubsystem.h"
 #include "TolgeeLog.h"
@@ -58,7 +60,13 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 
 	TSharedPtr<SViewport> GameViewportWidget = GEngine->GameViewport->GetGameViewportWidget();
 
-	if (WidgetPath.Widgets.Num() > 0 && WidgetPath.ContainsWidget(GameViewportWidget.Get()))
+#if UE_VERSION_NEWER_THAN(5, 0, 0)
+	const bool bValidHover = WidgetPath.Widgets.Num() > 0 && WidgetPath.ContainsWidget(GameViewportWidget.Get());
+#else
+	const bool bValidHover = WidgetPath.Widgets.Num() > 0 && GameViewportWidget.IsValid() && WidgetPath.ContainsWidget(GameViewportWidget.ToSharedRef());
+#endif
+
+	if (bValidHover)
 	{
 		TSharedPtr<SWidget> CurrentHoveredWidget = WidgetPath.GetLastWidget();
 		if (CurrentHoveredWidget->GetType() == STextBlockType)
@@ -68,10 +76,15 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 			// Calculate the Start & End in local space based on widget & parent viewport
 			const FGeometry& HoveredGeometry = CurrentHoveredWidget->GetCachedGeometry();
 			const FGeometry& ViewportGeometry = GameViewportWidget->GetCachedGeometry();
+
 			// TODO: make this a setting
 			const FVector2D Padding = FVector2D{0.2f, 0.2f};
-			FVector2D Start = HoveredGeometry.GetAbsolutePositionAtCoordinates(FVector2D::Zero()) - ViewportGeometry.GetAbsolutePositionAtCoordinates(FVector2D::Zero()) + Padding;
-			FVector2D End = HoveredGeometry.GetAbsolutePositionAtCoordinates(FVector2D::One()) - ViewportGeometry.GetAbsolutePositionAtCoordinates(FVector2D::Zero()) - Padding;
+
+			const FVector2D UpperLeft = { 0, 0 };
+			const FVector2D LowerRight = { 1, 1 };
+
+			FVector2D Start = HoveredGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) - ViewportGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) + Padding;
+			FVector2D End = HoveredGeometry.GetAbsolutePositionAtCoordinates(LowerRight) - ViewportGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) - Padding;
 
 			FBox2D Box = FBox2D(Start, End);
 			// TODO: make this a setting
