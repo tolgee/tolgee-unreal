@@ -254,8 +254,7 @@ TArray<ULocalizationTarget*> UTolgeeEditorIntegrationSubsystem::GatherValidLocal
 		if (LocalizationTarget)
 		{
 			const FLocalizationTargetSettings& LocalizationSettings = LocalizationTarget->Settings;
-			const bool bValidCulture =
-				!LocalizationSettings.SupportedCulturesStatistics.Num() == 0 && LocalizationSettings.SupportedCulturesStatistics.IsValidIndex(LocalizationSettings.NativeCultureIndex);
+			const bool bValidCulture = LocalizationSettings.SupportedCulturesStatistics.IsValidIndex(LocalizationSettings.NativeCultureIndex);
 			if (!bValidCulture)
 			{
 				UE_LOG(LogTolgee, Warning, TEXT("Skipping: %s -> Invalid default culture"), *LocalizationTarget->Settings.Name);
