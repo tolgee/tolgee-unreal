@@ -73,8 +73,8 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 			// TODO: make this a setting
 			const FVector2D Padding = FVector2D{0.2f, 0.2f};
 
-			const FVector2D UpperLeft = { 0, 0};
-			const FVector2D LowerRight = { 1, 1};
+			const FVector2D UpperLeft = { 0, 0 };
+			const FVector2D LowerRight = { 1, 1 };
 
 			FVector2D Start = HoveredGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) - ViewportGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) + Padding;
 			FVector2D End = HoveredGeometry.GetAbsolutePositionAtCoordinates(LowerRight) - ViewportGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) - Padding;

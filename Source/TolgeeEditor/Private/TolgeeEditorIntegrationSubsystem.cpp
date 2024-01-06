@@ -442,7 +442,7 @@ void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Col
 	const bool bIsRunningCookCommandlet = IsRunningCookCommandlet();
 #else
 	const FString Commandline = FCommandLine::Get();
-	bool bIsRunningCookCommandlet = IsRunningCommandlet() && Commandline.Contains(TEXT("run=cook"));
+	const bool bIsRunningCookCommandlet = IsRunningCommandlet() && Commandline.Contains(TEXT("run=cook"));
 #endif
 
 	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
