@@ -28,7 +28,7 @@ public:
 	/**
 	 * @brief Immediately sends a fetch request to grab the latest data
 	 */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Tolgee Localization")
 	void ManualFetch();
 	/**
 	 * @brief Returns the localized dictionary used the the TolgeeTextSource
