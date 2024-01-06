@@ -1,4 +1,4 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
 
 #pragma once
 
@@ -10,7 +10,7 @@
 /**
  * Holds configuration for integrating the Tolgee localization source
  */
-UCLASS(Config = Tolgee, defaultconfig)
+UCLASS(config = Tolgee, defaultconfig)
 class TOLGEE_API UTolgeeSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
