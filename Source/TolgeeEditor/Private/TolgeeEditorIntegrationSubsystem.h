@@ -67,7 +67,7 @@ private:
 	/**
 	 * @brief Callback executed when the editor main frame is ready to display the login pop-up
 	 */
-	void OnMainFrameReady();
+	void OnMainFrameReady(TSharedPtr<SWindow> InRootWindow, bool bIsRunningStartupDialog);
 	/**
 	 * @brief Exports the locally available data to a file on disk to package it in the final build
 	 */
