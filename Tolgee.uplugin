@@ -1,7 +1,6 @@
 {
   "FileVersion": 3,
   "VersionName": "0.1",
-  "EngineVersion": "4.26.0",
   "FriendlyName": "Tolgee",
   "Description": "Localization tool which makes the localization process simple. Easy to integrate to React, Angular and other applications.",
   "Category" : "Localization",
