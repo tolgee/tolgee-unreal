@@ -13,9 +13,9 @@
 #include <LocalizationConfigurationScript.h>
 #include <LocalizationSettings.h>
 #include <LocalizationTargetTypes.h>
+#include <Misc/EngineVersionComparison.h>
 #include <Misc/FeedbackContext.h>
 #include <Misc/FileHelper.h>
-#include <Misc/EngineVersionComparison.h>
 #include <Misc/MessageDialog.h>
 #include <Serialization/JsonInternationalizationManifestSerializer.h>
 #include <Settings/ProjectPackagingSettings.h>
@@ -125,7 +125,7 @@ void UTolgeeEditorIntegrationSubsystem::PurgeUnusedKeys()
 	FKeysDeletePayload Payload;
 	for (const auto& Key : UnusedRemoteKeys)
 	{
-		if(Key.RemoteId.IsSet())
+		if (Key.RemoteId.IsSet())
 		{
 			UE_LOG(LogTolgee, Log, TEXT("- id:%s namespace:%s key:%s"), *LexToString(Key.RemoteId.GetValue()), *Key.Namespace, *Key.Name);
 			Payload.Ids.Add(Key.RemoteId.GetValue());
@@ -353,7 +353,7 @@ void UTolgeeEditorIntegrationSubsystem::OnUnusedKeysPurged(FHttpRequestPtr Reque
 	GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>()->ManualFetch();
 }
 
-void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady()
+void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady(TSharedPtr<SWindow> InRootWindow, bool bIsRunningStartupDialog)
 {
 	// The browser plugin CEF version is too old to render the Tolgee website before 5.0
 #if UE_VERSION_NEWER_THAN(5, 0, 0)
@@ -425,17 +425,12 @@ void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Col
 	IMainFrameModule& MainFrameModule = IMainFrameModule::Get();
 	if (MainFrameModule.IsWindowInitialized())
 	{
-		OnMainFrameReady();
+		const TSharedPtr<SWindow> RootWindow = FSlateApplication::Get().GetActiveTopLevelWindow();
+		OnMainFrameReady(RootWindow, false);
 	}
 	else
 	{
-		MainFrameModule.OnMainFrameCreationFinished().AddWeakLambda(
-			this,
-			[=](TSharedPtr<SWindow> InRootWindow, bool bIsRunningStartupDialog)
-			{
-				OnMainFrameReady();
-			}
-		);
+		MainFrameModule.OnMainFrameCreationFinished().AddUObject(this, &UTolgeeEditorIntegrationSubsystem::OnMainFrameReady);
 	}
 
 #if ENGINE_MAJOR_VERSION > 4
