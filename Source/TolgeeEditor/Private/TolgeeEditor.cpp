@@ -2,8 +2,8 @@
 
 #include "TolgeeEditor.h"
 
-#include <LevelEditor.h>
 #include <Interfaces/IPluginManager.h>
+#include <LevelEditor.h>
 
 #include "STolgeeTranslationTab.h"
 #include "TolgeeEditorIntegrationSubsystem.h"
@@ -36,7 +36,11 @@ void FTolgeeEditorModule::ActivateWindowTab()
 void FTolgeeEditorModule::StartupModule()
 {
 	RegisterStyle();
-	RegisterWindowExtension();
+	const UTolgeeSettings* TolgeeSettings = GetDefault<UTolgeeSettings>();
+	if (!TolgeeSettings || TolgeeSettings->bOpenDashboardOnStartup)
+	{
+		RegisterWindowExtension();
+	}
 	RegisterToolbarExtension();
 }
 

@@ -54,6 +54,11 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Tolgee Localization")
 	bool bLiveTranslationUpdates = true;
 	/**
+	 * @brief Should we automatically open LocalizationDashboard on startup?
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Tolgee Localization")
+	bool bOpenDashboardOnStartup = false;
+	/**
 	 * @brief How often we should update the translation data from the server
 	 * @note in seconds
 	 */
