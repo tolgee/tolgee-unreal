@@ -49,6 +49,11 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Tolgee Localization")
 	TArray<FString> Languages;
 	/**
+	 * @brief With this enabled only strings from string tables will be uploaded & translated. Generated Keys (produced by Unreal for strings outside of string tables) will be ignored.
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Tolgee Localization")
+	bool bIgnoreGeneratedKeys = true;
+	/**
 	 * @brief Should we automatically fetch translation data at runtime?
 	 */
 	UPROPERTY(Config, EditAnywhere, Category = "Tolgee Localization")

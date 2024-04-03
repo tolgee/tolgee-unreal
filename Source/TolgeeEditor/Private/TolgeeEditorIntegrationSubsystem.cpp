@@ -203,6 +203,8 @@ TArray<FLocalizationKey> UTolgeeEditorIntegrationSubsystem::GetKeysFromTargets(T
 {
 	TArray<FLocalizationKey> KeysFound;
 
+	const UTolgeeSettings* TolgeeSettings = GetDefault<UTolgeeSettings>();
+
 	for (const ULocalizationTarget* LocalizationTarget : LocalizationTargets)
 	{
 		GWarn->BeginSlowTask(LOCTEXT("LoadingManifestData", "Loading Entries from Current Translation Manifest..."), true);
@@ -230,6 +232,13 @@ TArray<FLocalizationKey> UTolgeeEditorIntegrationSubsystem::GetKeysFromTargets(T
 			GWarn->StatusUpdate(CurrentManifestEntry, TotalManifestEntries, ProgressText);
 
 			const TSharedRef<FManifestEntry> ManifestEntry = ManifestItr.Value();
+
+			if(TolgeeSettings->bIgnoreGeneratedKeys && ManifestEntry->Namespace.IsEmpty())
+			{
+				// Only generated keys have no namespace. Keys from string tables are required to have a one.
+				continue;
+			}
+
 			for (auto ContextIter(ManifestEntry->Contexts.CreateConstIterator()); ContextIter; ++ContextIter)
 			{
 				FLocalizationKey& NewKey = KeysFound.Emplace_GetRef();
