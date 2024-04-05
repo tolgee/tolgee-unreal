@@ -55,10 +55,19 @@ void STolgeeTranslationTab::OnActiveTabChanged(TSharedPtr<SDockTab> PreviouslyAc
 
 void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController* PC)
 {
-	FSlateApplication& Application = FSlateApplication::Get();
-	FWidgetPath WidgetPath = Application.LocateWindowUnderMouse(Application.GetCursorPos(), Application.GetInteractiveTopLevelWindows());
+	if(!GEngine->GameViewport)
+	{
+		return;
+	}
 
 	TSharedPtr<SViewport> GameViewportWidget = GEngine->GameViewport->GetGameViewportWidget();
+	if(!GameViewportWidget.IsValid())
+	{
+		return;
+	}
+
+	FSlateApplication& Application = FSlateApplication::Get();
+	FWidgetPath WidgetPath = Application.LocateWindowUnderMouse(Application.GetCursorPos(), Application.GetInteractiveTopLevelWindows());
 
 #if UE_VERSION_NEWER_THAN(5, 0, 0)
 	const bool bValidHover = WidgetPath.Widgets.Num() > 0 && WidgetPath.ContainsWidget(GameViewportWidget.Get());
