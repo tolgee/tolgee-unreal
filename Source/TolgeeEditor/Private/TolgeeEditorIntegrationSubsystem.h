@@ -26,23 +26,39 @@ class UTolgeeEditorIntegrationSubsystem : public UEditorSubsystem
 
 public:
 	/**
-	 * @brief Uploads keys present locally that are not yet present on the Tolgee backend
+	 * Collects the local keys and fetches the remotes keys. After comparing the 2, it lets the users chose how to update the keys
 	 */
-	void UploadMissingKeys();
-	/**
-	 * @brief Delete keys present on the Tolgee backend that are no longer present locally
-	 */
-	void PurgeUnusedKeys();
+	void Sync();
 
 private:
 	/**
-	 * @brief Determine which local keys are not present in the remote configuration
+	 * Sends a request to the backend to import new keys
 	 */
-	TArray<FLocalizationKey> GetMissingLocalKeys() const;
+	void UploadLocalKeys(TArray<FLocalizationKey> NewLocalKeys);
+	/**
+	 * Callback executed after a request to import new keys is completed 
+	 */
+	void OnLocalKeysUploaded(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+	/**
+	 * Sends a request to the backend to delete unused keys
+	 */
+	void DeleteRemoteKeys(TArray<FLocalizedKey> UnusedRemoteKeys);
+	/**
+	 * Callback executed after a request to delete unused remote keys is completed 
+	 */
+	void OnRemoteKeysDeleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+	/**
+	 * Sends multiple requests to the backend to update the outdated keys' tag based on the new source string
+	 */
+	void UpdateOutdatedKeys(TArray<TPair<FLocalizationKey, FLocalizedKey>> OutdatedKeys);
+	/**
+	 * Callback executed after a request to update an outdated key's tag is completed
+	 */
+	void OnOutdatedKeyUpdated(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 	/**
 	 * @brief Gathers all the Localization keys available in the GameTargetSet LocalizationTargets which are correctly configured
 	 */
-	TArray<FLocalizationKey> GatherLocalKeys() const;
+	TValueOrError<TArray<FLocalizationKey>, FText> GatherLocalKeys() const;
 	/**
 	 * @brief Gathers all the localization keys available in the specified LocalizationTargets
 	 */
@@ -51,19 +67,6 @@ private:
 	 * @brief Determines which LocalizationTargets from the GameTargetSet are correctly configured
 	 */
 	TArray<ULocalizationTarget*> GatherValidLocalizationTargets() const;
-	/**
-	 * @brief Callback executed when the Keys upload to Tolgee backend is completed
-	 */
-	void OnMissingKeysUploaded(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
-
-	/**
-	 * @brief Determine which remote keys are not present in the local configuration
-	 */
-	TArray<FLocalizedKey> GetUnusedRemoteKeys() const;
-	/**
-	 * @brief Callback executed when the keys deleted from the Tolgee backend is completed
-	 */
-	void OnUnusedKeysPurged(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 	/**
 	 * @brief Callback executed when the editor main frame is ready to display the login pop-up
 	 */

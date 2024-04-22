@@ -31,7 +31,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Tolgee Localization")
 	void ManualFetch();
 	/**
-	 * @brief Returns the localized dictionary used the the TolgeeTextSource
+	 * @brief Returns true if a request to retrieve the translation from the backend server is currently ongoing
+	 */
+	bool IsFetchInprogress() const { return bFetchInProgress; }
+	/**
+	 * @brief Returns the localized dictionary used the TolgeeTextSource
 	 */
 	const FLocalizedDictionary& GetLocalizedDictionary() const;
 

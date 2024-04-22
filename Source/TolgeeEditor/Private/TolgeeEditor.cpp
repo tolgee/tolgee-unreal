@@ -190,50 +190,17 @@ void FTolgeeEditorModule::ExtendToolbar(FToolBarBuilder& Builder)
 					))
 				);
 
-				MenuBuilder.BeginSection(TEXT("KeyStatusCategory"), LOCTEXT("KeyStatusCategory", "Key Status"));
-
-				// clang-format off
-				const TSharedRef<STextBlock> StatusText = SNew(STextBlock)
-															.Text(LOCTEXT("KeyStatus", "All keys are up to date"))
-															.ColorAndOpacity(FSlateColor(FLinearColor::Red));
-				// clang-format on
-
 				MenuBuilder.AddMenuEntry(
-					LOCTEXT("FetchRemote", "Fetch remote"),
-					LOCTEXT("FetchRemoteTip", "Fetches the latest from the remote"),
+					LOCTEXT("Syncronize", "Syncronize"),
+					LOCTEXT("SyncronizeTip", "Syncronizes the state between local state and Tolgee backend, reconciling any differences"),
 					FSlateIcon(),
 					FUIAction(FExecuteAction::CreateLambda(
 						[]()
 						{
-							GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>()->ManualFetch();
+							GEditor->GetEditorSubsystem<UTolgeeEditorIntegrationSubsystem>()->Sync();
 						}
 					))
 				);
-				MenuBuilder.AddMenuEntry(
-					LOCTEXT("UploadMissing", "Upload missing keys"),
-					LOCTEXT("UploadMissingTip", "Upload local keys to Tolgee backend"),
-					FSlateIcon(),
-					FUIAction(FExecuteAction::CreateLambda(
-						[]()
-						{
-							GEditor->GetEditorSubsystem<UTolgeeEditorIntegrationSubsystem>()->UploadMissingKeys();
-						}
-					))
-				);
-				MenuBuilder.AddMenuEntry(
-					LOCTEXT("PurgeUnused", "Purge unused keys"),
-					LOCTEXT("PurgeUnusedTip", "Deleted unused keys from Tolgee backend"),
-					FSlateIcon(),
-					FUIAction(FExecuteAction::CreateLambda(
-						[]()
-						{
-							GEditor->GetEditorSubsystem<UTolgeeEditorIntegrationSubsystem>()->PurgeUnusedKeys();
-						}
-					))
-				);
-
-
-				MenuBuilder.EndSection();
 
 				return MenuBuilder.MakeWidget();
 			}

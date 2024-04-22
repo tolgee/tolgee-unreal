@@ -25,7 +25,7 @@ struct FKeysDeletePayload
  * @brief Representation of a Tolgee upload key
  */
 USTRUCT()
-struct FImportKeyItem
+struct FKeyItemPayload
 {
 	GENERATED_BODY()
 
