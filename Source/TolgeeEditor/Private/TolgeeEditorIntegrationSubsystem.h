@@ -25,14 +25,35 @@ class UTolgeeEditorIntegrationSubsystem : public UEditorSubsystem
 	GENERATED_BODY()
 
 public:
+	/**
+	 * Collects the local keys and fetches the remotes keys. After comparing the 2, it lets the users chose how to update the keys
+	 */
 	void Sync();
 
 private:
+	/**
+	 * Sends a request to the backend to import new keys
+	 */
 	void UploadLocalKeys(TArray<FLocalizationKey> NewLocalKeys);
+	/**
+	 * Callback executed after a request to import new keys is completed 
+	 */
 	void OnLocalKeysUploaded(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+	/**
+	 * Sends a request to the backend to delete unused keys
+	 */
 	void DeleteRemoteKeys(TArray<FLocalizedKey> UnusedRemoteKeys);
+	/**
+	 * Callback executed after a request to delete unused remote keys is completed 
+	 */
 	void OnRemoteKeysDeleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+	/**
+	 * Sends multiple requests to the backend to update the outdated keys' tag based on the new source string
+	 */
 	void UpdateOutdatedKeys(TArray<TPair<FLocalizationKey, FLocalizedKey>> OutdatedKeys);
+	/**
+	 * Callback executed after a request to update an outdated key's tag is completed
+	 */
 	void OnOutdatedKeyUpdated(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 	/**
 	 * @brief Gathers all the Localization keys available in the GameTargetSet LocalizationTargets which are correctly configured
