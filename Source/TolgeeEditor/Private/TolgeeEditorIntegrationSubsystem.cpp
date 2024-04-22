@@ -159,7 +159,7 @@ void UTolgeeEditorIntegrationSubsystem::UploadLocalKeys(TArray<FLocalizationKey>
 	{
 		UE_LOG(LogTolgee, Log, TEXT("- namespace:%s key:%s default:%s"), *Key.Namespace, *Key.Key, *Key.DefaultText);
 
-		FImportKeyItem KeyItem;
+		FKeyItemPayload KeyItem;
 		KeyItem.Name = Key.Key;
 		KeyItem.Namespace = Key.Namespace;
 
@@ -390,7 +390,7 @@ void UTolgeeEditorIntegrationSubsystem::UpdateOutdatedKeys(TArray<TPair<FLocaliz
 		UE_LOG(LogTolgee, Log, TEXT("Update request payload:"));
 		UE_LOG(LogTolgee, Log, TEXT("- id:%s namespace:%s key:%s"), *LexToString(KeyToUpdate.Value.RemoteId.GetValue()), *KeyToUpdate.Value.Namespace, *KeyToUpdate.Value.Name);
 		
-		FKeyUpdatePayload Payload;
+		FKeyItemPayload Payload;
 		Payload.Name = KeyToUpdate.Value.Name;
 		Payload.Namespace = KeyToUpdate.Value.Namespace;
 		

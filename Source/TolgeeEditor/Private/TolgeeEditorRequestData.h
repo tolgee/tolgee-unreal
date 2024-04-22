@@ -21,27 +21,11 @@ struct FKeysDeletePayload
 	TArray<int64> Ids;
 };
 
-USTRUCT()
-struct FKeyUpdatePayload
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-	FString Name;
-
-	UPROPERTY()
-	FString Namespace;
-
-	UPROPERTY()
-	TArray<FString> Tags;
-};
-
-
 /**
  * @brief Representation of a Tolgee upload key
  */
 USTRUCT()
-struct FImportKeyItem
+struct FKeyItemPayload
 {
 	GENERATED_BODY()
 
