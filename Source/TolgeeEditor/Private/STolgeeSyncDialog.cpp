@@ -144,10 +144,10 @@ FReply STolgeeSyncDialog::OnCancelClicked()
 
 FText STolgeeSyncDialog::GetOperationsSummary() const
 {
-	return FText::Format(INVTEXT("{0} operations will be performed"), GetNumberOfOperationToPerform());
+	return FText::Format(INVTEXT("{0} operations will be performed"), GetNumberOfKeysAffectedByOperations());
 }
 
-int STolgeeSyncDialog::GetNumberOfOperationToPerform() const
+int STolgeeSyncDialog::GetNumberOfKeysAffectedByOperations() const
 {
 	int Total = 0;
 	if (UploadNew.bPerform)
