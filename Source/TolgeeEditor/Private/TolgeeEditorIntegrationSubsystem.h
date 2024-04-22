@@ -32,6 +32,8 @@ private:
 	void OnLocalKeysUploaded(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 	void DeleteRemoteKeys(TArray<FLocalizedKey> UnusedRemoteKeys);
 	void OnRemoteKeysDeleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+	void UpdateOutdatedKeys(TArray<TPair<FLocalizationKey, FLocalizedKey>> OutdatedKeys);
+	void OnOutdatedKeyUpdated(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 	/**
 	 * @brief Gathers all the Localization keys available in the GameTargetSet LocalizationTargets which are correctly configured
 	 */

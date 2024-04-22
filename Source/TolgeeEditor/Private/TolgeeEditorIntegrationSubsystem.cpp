@@ -36,6 +36,11 @@ namespace
 		return A.Name == B.Key && A.Namespace == B.Namespace && A.Hash == TolgeeUtils::GetTranslationHash(B.DefaultText);
 	}
 
+	bool IsSameKeyWithChangedHash(const FLocalizedKey& A, const FLocalizationKey& B)
+	{
+		return A.Name == B.Key && A.Namespace == B.Namespace && A.Hash != TolgeeUtils::GetTranslationHash(B.DefaultText);
+	}
+
 	bool IsSameKey(const FLocalizationKey& B, const FLocalizedKey& A)
 	{
 		return IsSameKey(A, B);
@@ -91,9 +96,26 @@ void UTolgeeEditorIntegrationSubsystem::Sync()
 
 	const TArray<FLocalizedKey> RemoteKeys = LocalizationSubsystem->GetLocalizedDictionary().Keys;
 
-	const TArray<FLocalizationKey> KeysToAdd = RemoveExisting(LocalKeys, RemoteKeys);
-	const TArray<FLocalizationKey> KeysToUpdate;
-	const TArray<FLocalizedKey> KeysToRemove = RemoveExisting(RemoteKeys, LocalKeys);
+	TArray<FLocalizationKey> KeysToAdd = RemoveExisting(LocalKeys, RemoteKeys);
+	TArray<FLocalizedKey> KeysToRemove = RemoveExisting(RemoteKeys, LocalKeys);
+
+	TArray<TPair<FLocalizationKey, FLocalizedKey>> KeysToUpdate;
+
+	for (auto KeyToAddIt = KeysToAdd.CreateIterator(); KeyToAddIt; ++KeyToAddIt)
+	{
+		int32 KeyToRemoveIndex = KeysToRemove.IndexOfByPredicate([KeyToAdd = *KeyToAddIt](const FLocalizedKey& Element)
+		{
+			return IsSameKeyWithChangedHash(Element, KeyToAdd);
+		});
+
+		if (KeyToRemoveIndex != INDEX_NONE)
+		{
+			KeysToUpdate.Emplace(*KeyToAddIt, KeysToRemove[KeyToRemoveIndex]);
+
+			KeyToAddIt.RemoveCurrent();
+			KeysToRemove.RemoveAt(KeyToRemoveIndex);
+		}
+	}
 
 	if (KeysToAdd.IsEmpty() && KeysToUpdate.IsEmpty() && KeysToRemove.IsEmpty())
 	{
@@ -112,6 +134,11 @@ void UTolgeeEditorIntegrationSubsystem::Sync()
 	if (bRunUpload)
 	{
 		UploadLocalKeys(KeysToAdd);
+	}
+
+	if (bRunUpdate)
+	{
+		UpdateOutdatedKeys(KeysToUpdate);
 	}
 
 	if (bRunDelete)
@@ -318,7 +345,7 @@ TArray<ULocalizationTarget*> UTolgeeEditorIntegrationSubsystem::GatherValidLocal
 
 void UTolgeeEditorIntegrationSubsystem::OnLocalKeysUploaded(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 {
-	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeEditorIntegrationSubsystem::OnNewKeysUploaded"));
+	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeEditorIntegrationSubsystem::OnLocalKeysUploaded"));
 
 	if (!bWasSuccessful)
 	{
@@ -338,7 +365,7 @@ void UTolgeeEditorIntegrationSubsystem::OnLocalKeysUploaded(FHttpRequestPtr Requ
 
 void UTolgeeEditorIntegrationSubsystem::OnRemoteKeysDeleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 {
-	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeEditorIntegrationSubsystem::OnUnusedKeysDeleted"));
+	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeEditorIntegrationSubsystem::OnRemoteKeysDeleted"));
 
 	if (!bWasSuccessful)
 	{
@@ -351,7 +378,58 @@ void UTolgeeEditorIntegrationSubsystem::OnRemoteKeysDeleted(FHttpRequestPtr Requ
 		return;
 	}
 
-	UE_LOG(LogTolgee, Log, TEXT("Unused keys delete successfully."));
+	UE_LOG(LogTolgee, Log, TEXT("Unused keys deleted successfully."));
+
+	GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>()->ManualFetch();
+}
+
+void UTolgeeEditorIntegrationSubsystem::UpdateOutdatedKeys(TArray<TPair<FLocalizationKey, FLocalizedKey>> OutdatedKeys)
+{
+	for (const auto& KeyToUpdate : OutdatedKeys)
+	{
+		UE_LOG(LogTolgee, Log, TEXT("Update request payload:"));
+		UE_LOG(LogTolgee, Log, TEXT("- id:%s namespace:%s key:%s"), *LexToString(KeyToUpdate.Value.RemoteId.GetValue()), *KeyToUpdate.Value.Namespace, *KeyToUpdate.Value.Name);
+		
+		FKeyUpdatePayload Payload;
+		Payload.Name = KeyToUpdate.Value.Name;
+		Payload.Namespace = KeyToUpdate.Value.Namespace;
+		
+		const FString HashTag = FString::Printf(TEXT("%s%s"), *TolgeeUtils::KeyHashPrefix, *LexToString(TolgeeUtils::GetTranslationHash(KeyToUpdate.Key.DefaultText)));
+		Payload.Tags.Add(HashTag);
+
+		FString Json;
+		FJsonObjectConverter::UStructToJsonObjectString(Payload, Json);
+
+		FString KeyUrl = FString::Printf(TEXT("v2/projects/keys/%lld/complex-update"), KeyToUpdate.Value.RemoteId.GetValue());
+		const FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
+		HttpRequest->SetURL(TolgeeUtils::GetUrlEndpoint(KeyUrl));
+		HttpRequest->SetVerb("PUT");
+		HttpRequest->SetHeader(TEXT("X-API-Key"), GetDefault<UTolgeeSettings>()->ApiKey);
+		HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Type"), TolgeeUtils::GetSdkType());
+		HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Version"), TolgeeUtils::GetSdkVersion());
+		HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+		HttpRequest->SetContentAsString(Json);
+		HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnOutdatedKeyUpdated);
+		HttpRequest->ProcessRequest();
+	}
+}
+
+void UTolgeeEditorIntegrationSubsystem::OnOutdatedKeyUpdated(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
+{
+	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeEditorIntegrationSubsystem::OnOutdatedKeysUpdated"));
+
+	if (!bWasSuccessful)
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Request to updated outdated keys was unsuccessful."));
+		return;
+	}
+	if (!EHttpResponseCodes::IsOk(Response->GetResponseCode()))
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Request to updated outdated keys received unexpected code: %s content: %s"), *LexToString(Response->GetResponseCode()), *Response->GetContentAsString());
+		return;
+	}
+
+	UE_LOG(LogTolgee, Log, TEXT("Outdated keys updated successfully."));
 
 	GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>()->ManualFetch();
 }
