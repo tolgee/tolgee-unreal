@@ -21,15 +21,15 @@ void STolgeeTranslationTab::Construct(const FArguments& InArgs)
 {
 	ActiveTab();
 	// clang-format off
-	SDockTab::Construct( SDockTab::FArguments()
-		.TabRole(NomadTab)
-		.OnTabClosed_Raw(this, &STolgeeTranslationTab::CloseTab)
-	[
-		SAssignNew(Browser, SWebBrowser)
-		.InitialURL(TolgeeUtils::GetUrlEndpoint(TEXT("login")))
-		.ShowControls(false)
-		.ShowErrorMessage(true)
-	]);
+	SDockTab::Construct(SDockTab::FArguments()
+	                    .TabRole(NomadTab)
+	                    .OnTabClosed_Raw(this, &STolgeeTranslationTab::CloseTab)
+		[
+			SAssignNew(Browser, SWebBrowser)
+			.InitialURL(TolgeeUtils::GetUrlEndpoint(TEXT("login")))
+			.ShowControls(false)
+			.ShowErrorMessage(true)
+		]);
 	// clang-format on
 
 	FGlobalTabmanager::Get()->OnActiveTabChanged_Subscribe(FOnActiveTabChanged::FDelegate::CreateSP(this, &STolgeeTranslationTab::OnActiveTabChanged));
@@ -53,15 +53,23 @@ void STolgeeTranslationTab::OnActiveTabChanged(TSharedPtr<SDockTab> PreviouslyAc
 	}
 }
 
+bool GetTextNamespaceAndKey(const FText InText, FString& OutNamespace, FString& OutKey)
+{
+	OutNamespace = FTextInspector::GetNamespace(InText).Get(OutNamespace);
+	OutKey = FTextInspector::GetKey(InText).Get(OutKey);
+
+	return !OutNamespace.IsEmpty() && !OutKey.IsEmpty();
+}
+
 void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController* PC)
 {
-	if(!GEngine->GameViewport)
+	if (!GEngine->GameViewport)
 	{
 		return;
 	}
 
 	TSharedPtr<SViewport> GameViewportWidget = GEngine->GameViewport->GetGameViewportWidget();
-	if(!GameViewportWidget.IsValid())
+	if (!GameViewportWidget.IsValid())
 	{
 		return;
 	}
@@ -89,8 +97,8 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 			// TODO: make this a setting
 			const FVector2D Padding = FVector2D{0.2f, 0.2f};
 
-			const FVector2D UpperLeft = { 0, 0 };
-			const FVector2D LowerRight = { 1, 1 };
+			const FVector2D UpperLeft = {0, 0};
+			const FVector2D LowerRight = {1, 1};
 
 			FVector2D Start = HoveredGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) - ViewportGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) + Padding;
 			FVector2D End = HoveredGeometry.GetAbsolutePositionAtCoordinates(LowerRight) - ViewportGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) - Padding;
@@ -102,17 +110,33 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 
 			// Get information about the currently hovered text
 			const FText CurrentText = CurrentTextBlock->GetText();
-			const TOptional<FString> Namespace = FTextInspector::GetNamespace(CurrentText);
-			const TOptional<FString> Key = FTextInspector::GetKey(CurrentText);
+
+			const TOptional<FString> CurrentNamespace = FTextInspector::GetNamespace(CurrentText);
+			const TOptional<FString> CurrentKey = FTextInspector::GetKey(CurrentText);
+
+			FString Namespace, Key;
+
+			bool bResolved = GetTextNamespaceAndKey(CurrentText, Namespace, Key);
+			if (!bResolved)
+			{
+				// If we failed, maybe we can resolve the initial text that was formatted instead?
+
+				TArray<FHistoricTextFormatData> CurrentFormatData;
+				FTextInspector::GetHistoricFormatData(CurrentText, CurrentFormatData);
+
+				if (!CurrentFormatData.IsEmpty())
+				{
+					GetTextNamespaceAndKey(CurrentFormatData[CurrentFormatData.Num() - 1].SourceFmt.GetSourceText(), Namespace, Key);
+				}
+			}
 
 			// Update the browser widget if the current state allows
-
-			const FString EndPoint = FString::Printf(TEXT("translations/single?key=%s&ns=%s"), *Key.Get(""), *Namespace.Get(""));
+			const FString EndPoint = FString::Printf(TEXT("translations/single?key=%s&ns=%s"), *Key, *Namespace);
 			const FString NewUrl = TolgeeUtils::GetProjectUrlEndpoint(EndPoint);
 			const FString CurrentUrl = Browser->GetUrl();
 			if (NewUrl != CurrentUrl && Browser->IsLoaded())
 			{
-				UE_LOG(LogTolgee, Log, TEXT("CurrentWidget: %s Namespace: %s Key: %s"), *CurrentTextBlock->GetText().ToString(), *Namespace.Get(""), *Key.Get(""));
+				UE_LOG(LogTolgee, Log, TEXT("CurrentWidget: %s Namespace: %s Key: %s"), *CurrentTextBlock->GetText().ToString(), *Namespace, *Key);
 
 				Browser->LoadURL(NewUrl);
 			}
