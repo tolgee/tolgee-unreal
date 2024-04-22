@@ -25,24 +25,17 @@ class UTolgeeEditorIntegrationSubsystem : public UEditorSubsystem
 	GENERATED_BODY()
 
 public:
-	/**
-	 * @brief Uploads keys present locally that are not yet present on the Tolgee backend
-	 */
-	void UploadMissingKeys();
-	/**
-	 * @brief Delete keys present on the Tolgee backend that are no longer present locally
-	 */
-	void PurgeUnusedKeys();
+	void Sync();
 
 private:
-	/**
-	 * @brief Determine which local keys are not present in the remote configuration
-	 */
-	TArray<FLocalizationKey> GetMissingLocalKeys() const;
+	void UploadLocalKeys(TArray<FLocalizationKey> NewLocalKeys);
+	void OnLocalKeysUploaded(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+	void DeleteRemoteKeys(TArray<FLocalizedKey> UnusedRemoteKeys);
+	void OnRemoteKeysDeleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 	/**
 	 * @brief Gathers all the Localization keys available in the GameTargetSet LocalizationTargets which are correctly configured
 	 */
-	TArray<FLocalizationKey> GatherLocalKeys() const;
+	TValueOrError<TArray<FLocalizationKey>, FText> GatherLocalKeys() const;
 	/**
 	 * @brief Gathers all the localization keys available in the specified LocalizationTargets
 	 */
@@ -51,19 +44,6 @@ private:
 	 * @brief Determines which LocalizationTargets from the GameTargetSet are correctly configured
 	 */
 	TArray<ULocalizationTarget*> GatherValidLocalizationTargets() const;
-	/**
-	 * @brief Callback executed when the Keys upload to Tolgee backend is completed
-	 */
-	void OnMissingKeysUploaded(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
-
-	/**
-	 * @brief Determine which remote keys are not present in the local configuration
-	 */
-	TArray<FLocalizedKey> GetUnusedRemoteKeys() const;
-	/**
-	 * @brief Callback executed when the keys deleted from the Tolgee backend is completed
-	 */
-	void OnUnusedKeysPurged(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
 	/**
 	 * @brief Callback executed when the editor main frame is ready to display the login pop-up
 	 */

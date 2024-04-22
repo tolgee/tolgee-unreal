@@ -30,6 +30,8 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Tolgee Localization")
 	void ManualFetch();
+	
+	bool IsFetchInprogress() const { return bFetchInProgress; }
 	/**
 	 * @brief Returns the localized dictionary used the the TolgeeTextSource
 	 */

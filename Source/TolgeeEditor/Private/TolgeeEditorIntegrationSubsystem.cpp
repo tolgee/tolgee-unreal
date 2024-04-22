@@ -20,6 +20,7 @@
 #include <Serialization/JsonInternationalizationManifestSerializer.h>
 #include <Settings/ProjectPackagingSettings.h>
 
+#include "STolgeeSyncDialog.h"
 #include "TolgeeEditor.h"
 #include "TolgeeLocalizationSubsystem.h"
 #include "TolgeeLog.h"
@@ -34,35 +35,100 @@ namespace
 	{
 		return A.Name == B.Key && A.Namespace == B.Namespace && A.Hash == TolgeeUtils::GetTranslationHash(B.DefaultText);
 	}
+
+	bool IsSameKey(const FLocalizationKey& B, const FLocalizedKey& A)
+	{
+		return IsSameKey(A, B);
+	}
 } // namespace
 
-void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
+template <typename T, typename U>
+TArray<T> RemoveExisting(const TArray<T>& InArray, const TArray<U>& InExisting)
 {
-	TArray<FLocalizationKey> MissingLocalKeys = GetMissingLocalKeys();
-
-	if (MissingLocalKeys.Num() == 0)
+	TArray<T> Result;
+	for (const T& InElement : InArray)
 	{
-		const FText NoKeysToUpload = LOCTEXT("NoKeysToUpload", "No Keys found to upload");
-		FMessageDialog::Open(EAppMsgType::Ok, NoKeysToUpload);
+		const bool bExists = InExisting.ContainsByPredicate([InElement](const U& Element)
+		{
+			return IsSameKey(InElement, Element);
+		});
 
+		if (!bExists)
+		{
+			Result.Add(InElement);
+		}
+	}
+
+	return Result;
+}
+
+void UTolgeeEditorIntegrationSubsystem::Sync()
+{
+	// Gather local keys
+	TValueOrError<TArray<FLocalizationKey>, FText> LocalKeysResult = GatherLocalKeys();
+	if (LocalKeysResult.HasError())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, INVTEXT("Gathering local keys failed."));
 		return;
 	}
 
-	const FText ConfirmUpload = FText::Format(FTextFormat(LOCTEXT("UploadMissingKeysConfirmation", "Upload {0} keys to Tolgee backend? This action is not reversible")), MissingLocalKeys.Num());
-	const EAppReturnType::Type Choice = FMessageDialog::Open(EAppMsgType::OkCancel, ConfirmUpload);
+	const TArray<FLocalizationKey> LocalKeys = LocalKeysResult.GetValue();
 
-	if (Choice == EAppReturnType::Cancel)
+	// Gather remote keys
+	UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
+	LocalizationSubsystem->ManualFetch();
+
+	// We need to wait synchronously wait for the fetch response to ensure we have the latest data
+	while (LocalizationSubsystem->IsFetchInprogress())
 	{
+		FPlatformProcess::Sleep(0.01f);
+
+		if (IsInGameThread())
+		{
+			FHttpModule::Get().GetHttpManager().Tick(0.01f);
+		}
+	}
+
+	const TArray<FLocalizedKey> RemoteKeys = LocalizationSubsystem->GetLocalizedDictionary().Keys;
+
+	const TArray<FLocalizationKey> KeysToAdd = RemoveExisting(LocalKeys, RemoteKeys);
+	const TArray<FLocalizationKey> KeysToUpdate;
+	const TArray<FLocalizedKey> KeysToRemove = RemoveExisting(RemoteKeys, LocalKeys);
+
+	if (KeysToAdd.IsEmpty() && KeysToUpdate.IsEmpty() && KeysToRemove.IsEmpty())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, INVTEXT("Everything is up to date."));
 		return;
 	}
 
+	TSharedRef<STolgeeSyncDialog> SyncWindow = SNew(STolgeeSyncDialog, KeysToAdd.Num(), KeysToUpdate.Num(), KeysToRemove.Num());
+
+	GEditor->EditorAddModalWindow(SyncWindow);
+
+	const bool bRunUpload = SyncWindow->UploadNew.bPerform;
+	const bool bRunUpdate = SyncWindow->UpdateOutdated.bPerform;
+	const bool bRunDelete = SyncWindow->DeleteUnused.bPerform;
+
+	if (bRunUpload)
+	{
+		UploadLocalKeys(KeysToAdd);
+	}
+
+	if (bRunDelete)
+	{
+		DeleteRemoteKeys(KeysToRemove);
+	}
+}
+
+void UTolgeeEditorIntegrationSubsystem::UploadLocalKeys(TArray<FLocalizationKey> NewLocalKeys)
+{
 	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
 	const FString DefaultLocale = Settings->Languages.Num() > 0 ? Settings->Languages[0] : TEXT("en");
 
 	TArray<TSharedPtr<FJsonValue>> Keys;
 
 	UE_LOG(LogTolgee, Log, TEXT("Upload request payload:"));
-	for (const auto& Key : MissingLocalKeys)
+	for (const auto& Key : NewLocalKeys)
 	{
 		UE_LOG(LogTolgee, Log, TEXT("- namespace:%s key:%s default:%s"), *Key.Namespace, *Key.Key, *Key.DefaultText);
 
@@ -97,31 +163,13 @@ void UTolgeeEditorIntegrationSubsystem::UploadMissingKeys()
 	HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Version"), TolgeeUtils::GetSdkVersion());
 	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 	HttpRequest->SetContentAsString(Json);
-	HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnMissingKeysUploaded);
+	HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnLocalKeysUploaded);
 	HttpRequest->ProcessRequest();
 }
 
-void UTolgeeEditorIntegrationSubsystem::PurgeUnusedKeys()
+void UTolgeeEditorIntegrationSubsystem::DeleteRemoteKeys(TArray<FLocalizedKey> UnusedRemoteKeys)
 {
-	TArray<FLocalizedKey> UnusedRemoteKeys = GetUnusedRemoteKeys();
-
-	if (UnusedRemoteKeys.Num() == 0)
-	{
-		const FText NoKeysToPurge = LOCTEXT("NoKeysToPurge", "No keys found to purge");
-		FMessageDialog::Open(EAppMsgType::Ok, NoKeysToPurge);
-
-		return;
-	}
-
-	const FText ConfirmPurge = FText::Format(FTextFormat(LOCTEXT("PurgeUnusedKeysConfirmation", "Delete {0} keys from Tolgee backend? This action is not reversible")), UnusedRemoteKeys.Num());
-	const EAppReturnType::Type Choice = FMessageDialog::Open(EAppMsgType::OkCancel, ConfirmPurge);
-
-	if (Choice == EAppReturnType::Cancel)
-	{
-		return;
-	}
-
-	UE_LOG(LogTolgee, Log, TEXT("Purge request payload:"));
+	UE_LOG(LogTolgee, Log, TEXT("Delete request payload:"));
 	FKeysDeletePayload Payload;
 	for (const auto& Key : UnusedRemoteKeys)
 	{
@@ -147,43 +195,16 @@ void UTolgeeEditorIntegrationSubsystem::PurgeUnusedKeys()
 	HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Version"), TolgeeUtils::GetSdkVersion());
 	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
 	HttpRequest->SetContentAsString(Json);
-	HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnUnusedKeysPurged);
+	HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnRemoteKeysDeleted);
 	HttpRequest->ProcessRequest();
 }
 
-TArray<FLocalizationKey> UTolgeeEditorIntegrationSubsystem::GetMissingLocalKeys() const
-{
-	const UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
-	const FLocalizedDictionary RemoteKeys = LocalizationSubsystem->GetLocalizedDictionary();
-
-	TArray<FLocalizationKey> LocalKeys = GatherLocalKeys();
-
-	for (auto It = LocalKeys.CreateIterator(); It; ++It)
-	{
-		const FLocalizationKey& LocalizationKey = *It;
-		const bool bFoundLocally = RemoteKeys.Keys.ContainsByPredicate(
-			[LocalizationKey](const FLocalizedKey& Key)
-			{
-				return IsSameKey(Key, LocalizationKey);
-			}
-		);
-
-		if (bFoundLocally)
-		{
-			It.RemoveCurrent();
-		}
-	}
-
-	return LocalKeys;
-}
-
-TArray<FLocalizationKey> UTolgeeEditorIntegrationSubsystem::GatherLocalKeys() const
+TValueOrError<TArray<FLocalizationKey>, FText> UTolgeeEditorIntegrationSubsystem::GatherLocalKeys() const
 {
 	TArray<ULocalizationTarget*> TargetObjectsToProcess = GatherValidLocalizationTargets();
 	if (TargetObjectsToProcess.Num() == 0)
 	{
-		UE_LOG(LogTolgee, Error, TEXT("No valid TargetObjects found in GetGameTargetSet."));
-		return {};
+		return MakeError(INVTEXT("No valid TargetObjects found in GetGameTargetSet."));
 	}
 
 	// Update the localization target before extract the keys out of them
@@ -192,11 +213,10 @@ TArray<FLocalizationKey> UTolgeeEditorIntegrationSubsystem::GatherLocalKeys() co
 
 	if (!bWasSuccessful)
 	{
-		UE_LOG(LogTolgee, Error, TEXT("GatherTextFromTargets failed to update TargetObjects."));
-		return {};
+		return MakeError(INVTEXT("GatherTextFromTargets failed to update TargetObjects."));
 	}
 
-	return GetKeysFromTargets(TargetObjectsToProcess);
+	return MakeValue(GetKeysFromTargets(TargetObjectsToProcess));
 }
 
 TArray<FLocalizationKey> UTolgeeEditorIntegrationSubsystem::GetKeysFromTargets(TArray<ULocalizationTarget*> LocalizationTargets) const
@@ -233,7 +253,7 @@ TArray<FLocalizationKey> UTolgeeEditorIntegrationSubsystem::GetKeysFromTargets(T
 
 			const TSharedRef<FManifestEntry> ManifestEntry = ManifestItr.Value();
 
-			if(TolgeeSettings->bIgnoreGeneratedKeys && ManifestEntry->Namespace.IsEmpty())
+			if (TolgeeSettings->bIgnoreGeneratedKeys && ManifestEntry->Namespace.IsEmpty())
 			{
 				// Only generated keys have no namespace. Keys from string tables are required to have a one.
 				continue;
@@ -296,68 +316,42 @@ TArray<ULocalizationTarget*> UTolgeeEditorIntegrationSubsystem::GatherValidLocal
 	return Result;
 }
 
-void UTolgeeEditorIntegrationSubsystem::OnMissingKeysUploaded(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
+void UTolgeeEditorIntegrationSubsystem::OnLocalKeysUploaded(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 {
-	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeEditorIntegrationSubsystem::OnMissingKeysUploaded"));
+	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeEditorIntegrationSubsystem::OnNewKeysUploaded"));
 
 	if (!bWasSuccessful)
 	{
-		UE_LOG(LogTolgee, Error, TEXT("Request to upload missing keys was unsuccessful."));
+		UE_LOG(LogTolgee, Error, TEXT("Request to upload new keys was unsuccessful."));
 		return;
 	}
 	if (!EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 	{
-		UE_LOG(LogTolgee, Error, TEXT("Request to upload missing keys received unexpected code: %s content: %s"), *LexToString(Response->GetResponseCode()), *Response->GetContentAsString());
+		UE_LOG(LogTolgee, Error, TEXT("Request to upload new keys received unexpected code: %s content: %s"), *LexToString(Response->GetResponseCode()), *Response->GetContentAsString());
 		return;
 	}
 
-	UE_LOG(LogTolgee, Log, TEXT("Missing keys uploaded successfully."));
+	UE_LOG(LogTolgee, Log, TEXT("New keys uploaded successfully."));
 
 	GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>()->ManualFetch();
 }
 
-TArray<FLocalizedKey> UTolgeeEditorIntegrationSubsystem::GetUnusedRemoteKeys() const
+void UTolgeeEditorIntegrationSubsystem::OnRemoteKeysDeleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 {
-	const UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
-	FLocalizedDictionary RemoteKeys = LocalizationSubsystem->GetLocalizedDictionary();
-
-	TArray<FLocalizationKey> LocalKeys = GatherLocalKeys();
-
-	for (auto It = RemoteKeys.Keys.CreateIterator(); It; ++It)
-	{
-		const FLocalizedKey& TolgeeKey = *It;
-		const bool bFoundLocally = LocalKeys.ContainsByPredicate(
-			[TolgeeKey](const FLocalizationKey& Key)
-			{
-				return IsSameKey(TolgeeKey, Key);
-			}
-		);
-
-		if (bFoundLocally)
-		{
-			It.RemoveCurrent();
-		}
-	}
-
-	return RemoteKeys.Keys;
-}
-
-void UTolgeeEditorIntegrationSubsystem::OnUnusedKeysPurged(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
-{
-	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeEditorIntegrationSubsystem::OnUnusedKeysPurged"));
+	UE_LOG(LogTolgee, Verbose, TEXT("UTolgeeEditorIntegrationSubsystem::OnUnusedKeysDeleted"));
 
 	if (!bWasSuccessful)
 	{
-		UE_LOG(LogTolgee, Error, TEXT("Request to purge unused keys was unsuccessful."));
+		UE_LOG(LogTolgee, Error, TEXT("Request to delete unused keys was unsuccessful."));
 		return;
 	}
 	if (!EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 	{
-		UE_LOG(LogTolgee, Error, TEXT("Request to purge unused keys received unexpected code: %s content: %s"), *LexToString(Response->GetResponseCode()), *Response->GetContentAsString());
+		UE_LOG(LogTolgee, Error, TEXT("Request to delete unused keys received unexpected code: %s content: %s"), *LexToString(Response->GetResponseCode()), *Response->GetContentAsString());
 		return;
 	}
 
-	UE_LOG(LogTolgee, Log, TEXT("Unused keys purged successfully."));
+	UE_LOG(LogTolgee, Log, TEXT("Unused keys delete successfully."));
 
 	GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>()->ManualFetch();
 }
@@ -376,6 +370,7 @@ void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady(TSharedPtr<SWindow> InR
 	}
 #endif
 }
+
 void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
 {
 	const UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
