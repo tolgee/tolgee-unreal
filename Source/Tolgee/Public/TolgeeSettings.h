@@ -64,7 +64,11 @@ public:
 	 */
 	UPROPERTY(Config, EditAnywhere, Category = "Tolgee Localization", meta = (EditCondition = "bLiveTranslationUpdates", UIMin = "0"))
 	float UpdateInterval = 60.0f;
-
+	/**
+	 * @brief Automatically fetch Translations.json on cook
+	 */
+	UPROPERTY(Config, EditAnywhere, Category = "Tolgee Localization")
+	bool bFetchTranslationsOnCook = true;
 private:
 	// Begin UDeveloperSettings interface
 	virtual FName GetContainerName() const override;

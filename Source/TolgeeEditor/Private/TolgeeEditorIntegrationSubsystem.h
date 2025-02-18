@@ -30,7 +30,13 @@ public:
 	 */
 	void Sync();
 
+	void DownloadTranslationsJson();
+
 private:
+	bool EnsureFileCheckedOutSourceControl(FString FilePath);
+
+	bool EnsureFileFileAddedSourceControl(FString FilePath, bool bWasFileModified);
+	
 	/**
 	 * Sends a request to the backend to import new keys
 	 */
@@ -74,7 +80,7 @@ private:
 	/**
 	 * @brief Exports the locally available data to a file on disk to package it in the final build
 	 */
-	void ExportLocalTranslations();
+	void ExportLocalTranslations(bool& WasModified);
 
 	// Begin UEditorSubsystem interface
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
