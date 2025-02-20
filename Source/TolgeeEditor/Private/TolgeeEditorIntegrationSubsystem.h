@@ -29,8 +29,21 @@ public:
 	 * Collects the local keys and fetches the remotes keys. After comparing the 2, it lets the users chose how to update the keys
 	 */
 	void Sync();
+	/**
+	 * Downloads the latest translations from the backend and updates the Translations.json file in the project 
+	 */
+	void DownloadTranslationsJson();
 
 private:
+	/**
+	 * Ensures that the file is checked out if it's source controlled.
+	 */
+	bool EnsureFileCheckedOutSourceControl(FString FilePath);
+	/**
+	 * Ensures that the file is added to source control if it was modified
+	 * If it was not modified it will ensure that the file does not remain checked out
+	 */
+	bool EnsureAddedStateSourceControl(FString FilePath, bool bWasFileModified);
 	/**
 	 * Sends a request to the backend to import new keys
 	 */
@@ -72,9 +85,9 @@ private:
 	 */
 	void OnMainFrameReady(TSharedPtr<SWindow> InRootWindow, bool bIsRunningStartupDialog);
 	/**
-	 * @brief Exports the locally available data to a file on disk to package it in the final build
+	 * @brief Exports the locally available data to a file on disk to package it in the final build, returns true if the local file content was modified during the operation
 	 */
-	void ExportLocalTranslations();
+	bool ExportLocalTranslations();
 
 	// Begin UEditorSubsystem interface
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;

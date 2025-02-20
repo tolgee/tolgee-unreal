@@ -4,6 +4,10 @@
 
 #include <HttpManager.h>
 #include <HttpModule.h>
+#include <ISourceControlModule.h>
+#include <ISourceControlOperation.h>
+#include <ISourceControlProvider.h>
+#include <ISourceControlState.h>
 #include <Interfaces/IHttpRequest.h>
 #include <Interfaces/IHttpResponse.h>
 #include <Interfaces/IMainFrameModule.h>
@@ -19,6 +23,7 @@
 #include <Misc/MessageDialog.h>
 #include <Serialization/JsonInternationalizationManifestSerializer.h>
 #include <Settings/ProjectPackagingSettings.h>
+#include <SourceControlOperations.h>
 
 #include "STolgeeSyncDialog.h"
 #include "TolgeeEditor.h"
@@ -145,6 +150,114 @@ void UTolgeeEditorIntegrationSubsystem::Sync()
 	{
 		DeleteRemoteKeys(KeysToRemove);
 	}
+}
+
+void UTolgeeEditorIntegrationSubsystem::DownloadTranslationsJson()
+{
+	// Gather remote keys
+	UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
+	LocalizationSubsystem->ManualFetch();
+
+	// We need to wait synchronously wait for the fetch response to ensure we have the latest data
+	while (LocalizationSubsystem->IsFetchInprogress())
+	{
+		FPlatformProcess::Sleep(0.01f);
+
+		if (IsInGameThread())
+		{
+			FHttpModule::Get().GetHttpManager().Tick(0.01f);
+		}
+	}
+
+	const FString FilePath = TolgeeUtils::GetLocalizationSourceFile();
+
+	EnsureFileCheckedOutSourceControl(FilePath);
+	bool bWasModified = ExportLocalTranslations();
+	EnsureAddedStateSourceControl(FilePath, bWasModified);
+}
+
+bool UTolgeeEditorIntegrationSubsystem::EnsureFileCheckedOutSourceControl(FString FilePath)
+{
+	if (!FPaths::FileExists(FilePath))
+	{
+		return true;
+	}
+	
+	ISourceControlProvider& SourceControlProvider = ISourceControlModule::Get().GetProvider();
+	
+	if (!SourceControlProvider.IsEnabled())
+	{
+		return true;
+	}
+
+	FSourceControlStatePtr SourceControlState = SourceControlProvider.GetState(FilePath, EStateCacheUsage::ForceUpdate);
+	if (!SourceControlState.IsValid() || !SourceControlState->IsSourceControlled())
+	{
+		return true;
+	}
+
+	if (!SourceControlState->IsCheckedOut())
+	{
+		TSharedRef<FCheckOut, ESPMode::ThreadSafe> CheckOutOperation = ISourceControlOperation::Create<FCheckOut>();
+
+		if (SourceControlProvider.Execute(CheckOutOperation, FilePath) == ECommandResult::Succeeded)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	return true;
+}
+
+bool UTolgeeEditorIntegrationSubsystem::EnsureAddedStateSourceControl(FString FilePath, bool bWasFileModified)
+{
+	if (!FPaths::FileExists(FilePath))
+	{
+		return false;
+	}
+	
+	ISourceControlProvider& SourceControlProvider = ISourceControlModule::Get().GetProvider();
+	
+	if (!SourceControlProvider.IsEnabled())
+	{
+		return true;
+	}
+	
+	// Ensure we have the latest state from Perforce
+	TArray<FString> FilesToUpdate = { FilePath };
+	SourceControlProvider.Execute(ISourceControlOperation::Create<FUpdateStatus>(), FilesToUpdate);
+    
+	// Fetch the refreshed state
+	FSourceControlStatePtr SourceControlState = SourceControlProvider.GetState(FilePath, EStateCacheUsage::ForceUpdate);
+
+	if (SourceControlState.IsValid() && SourceControlState->IsSourceControlled() && SourceControlState->IsCheckedOut())
+	{
+		// TODO: The idiomatic way of checking if the file was modified would be to use SourceControlState->IsModified()
+		// But that did not work in a reliable way with Perforce even when retrying with waiting up to 5 seconds and still the file was
+		// reverted even if it was modified. Relying on the provided bool bWasFileModified is a workaround to make this reliable.
+		
+		if (bWasFileModified)
+		{
+			// File is modified, do NOT revert it
+			return true;
+		}
+
+		// If the file is checked out but NOT modified, revert it
+		TSharedRef<FRevert, ESPMode::ThreadSafe> RevertOperation = ISourceControlOperation::Create<FRevert>();
+		SourceControlProvider.Execute(RevertOperation, FilePath);
+        
+		return true;
+	}
+	
+	TSharedRef<FMarkForAdd, ESPMode::ThreadSafe> AddOperation = ISourceControlOperation::Create<FMarkForAdd>();
+	if (SourceControlProvider.Execute(AddOperation, FilePath) == ECommandResult::Succeeded)
+	{
+		return true;
+	}
+
+	return false;
 }
 
 void UTolgeeEditorIntegrationSubsystem::UploadLocalKeys(TArray<FLocalizationKey> NewLocalKeys)
@@ -449,7 +562,7 @@ void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady(TSharedPtr<SWindow> InR
 #endif
 }
 
-void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
+bool UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
 {
 	const UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
 	while (LocalizationSubsystem->GetLocalizedDictionary().Keys.Num() == 0)
@@ -468,14 +581,26 @@ void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
 	if (!FJsonObjectConverter::UStructToJsonObjectString(Dictionary, JsonString))
 	{
 		UE_LOG(LogTolgee, Error, TEXT("Couldn't convert the localized dictionary to string"));
-		return;
+		return false;
 	}
 
 	const FString Filename = TolgeeUtils::GetLocalizationSourceFile();
+	FString BeforeHash;
+	if (FPaths::FileExists(Filename))
+	{
+		FString BeforeFileContents;
+		if (FFileHelper::LoadFileToString(BeforeFileContents, *Filename))
+		{
+			BeforeHash = FMD5::HashAnsiString(*BeforeFileContents);
+		}
+	}
+
+	bool wasModified = BeforeHash != FMD5::HashAnsiString(*JsonString);
+	
 	if (!FFileHelper::SaveStringToFile(JsonString, *Filename))
 	{
 		UE_LOG(LogTolgee, Error, TEXT("Couldn't save the localized dictionary to file: %s"), *Filename);
-		return;
+		return false;
 	}
 
 	const FDirectoryPath TolgeeLocalizationPath = TolgeeUtils::GetLocalizationDirectory();
@@ -492,9 +617,10 @@ void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
 		ProjectPackagingSettings->DirectoriesToAlwaysStageAsNonUFS.Add(TolgeeLocalizationPath);
 		ProjectPackagingSettings->SaveConfig();
 	}
-
-
+	
 	UE_LOG(LogTolgee, Display, TEXT("Localized dictionary succesfully saved to file: %s"), *Filename);
+
+	return wasModified;
 }
 
 void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -523,9 +649,9 @@ void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Col
 #endif
 
 	const UTolgeeSettings* Settings = GetDefault<UTolgeeSettings>();
-	if (bIsRunningCookCommandlet && !Settings->bLiveTranslationUpdates)
+	if (bIsRunningCookCommandlet && !Settings->bLiveTranslationUpdates && Settings->bFetchTranslationsOnCook)
 	{
-		ExportLocalTranslations();
+		DownloadTranslationsJson();
 	}
 }
 

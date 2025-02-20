@@ -201,6 +201,18 @@ void FTolgeeEditorModule::ExtendToolbar(FToolBarBuilder& Builder)
 						}
 					))
 				);
+				
+				MenuBuilder.AddMenuEntry(
+					LOCTEXT("DownloadTranslations", "Download Translations.json"),
+					LOCTEXT("DownloadTranslationsTip", "Download the latest Translations.json file from Tolgee and add it to VCS"),
+					FSlateIcon(),
+					FUIAction(FExecuteAction::CreateLambda(
+						[]()
+						{
+							GEditor->GetEditorSubsystem<UTolgeeEditorIntegrationSubsystem>()->DownloadTranslationsJson();
+						}
+					))
+				);
 
 				return MenuBuilder.MakeWidget();
 			}
