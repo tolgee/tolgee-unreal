@@ -4,6 +4,10 @@
 
 #include <HttpManager.h>
 #include <HttpModule.h>
+#include <ISourceControlModule.h>
+#include <ISourceControlOperation.h>
+#include <ISourceControlProvider.h>
+#include <ISourceControlState.h>
 #include <Interfaces/IHttpRequest.h>
 #include <Interfaces/IHttpResponse.h>
 #include <Interfaces/IMainFrameModule.h>
@@ -19,12 +23,7 @@
 #include <Misc/MessageDialog.h>
 #include <Serialization/JsonInternationalizationManifestSerializer.h>
 #include <Settings/ProjectPackagingSettings.h>
-
-#include "ISourceControlModule.h"
-#include "ISourceControlProvider.h"
-#include "ISourceControlOperation.h"
-#include "ISourceControlState.h"
-#include "SourceControlOperations.h"
+#include <SourceControlOperations.h>
 
 #include "STolgeeSyncDialog.h"
 #include "TolgeeEditor.h"
@@ -173,9 +172,8 @@ void UTolgeeEditorIntegrationSubsystem::DownloadTranslationsJson()
 	const FString FilePath = TolgeeUtils::GetLocalizationSourceFile();
 
 	EnsureFileCheckedOutSourceControl(FilePath);
-	bool bWasModified = false;
-	ExportLocalTranslations(bWasModified);
-	EnsureFileFileAddedSourceControl(FilePath, bWasModified);
+	bool bWasModified = ExportLocalTranslations();
+	EnsureAddedStateSourceControl(FilePath, bWasModified);
 }
 
 bool UTolgeeEditorIntegrationSubsystem::EnsureFileCheckedOutSourceControl(FString FilePath)
@@ -213,7 +211,7 @@ bool UTolgeeEditorIntegrationSubsystem::EnsureFileCheckedOutSourceControl(FStrin
 	return true;
 }
 
-bool UTolgeeEditorIntegrationSubsystem::EnsureFileFileAddedSourceControl(FString FilePath, bool bWasFileModified)
+bool UTolgeeEditorIntegrationSubsystem::EnsureAddedStateSourceControl(FString FilePath, bool bWasFileModified)
 {
 	if (!FPaths::FileExists(FilePath))
 	{
@@ -236,6 +234,10 @@ bool UTolgeeEditorIntegrationSubsystem::EnsureFileFileAddedSourceControl(FString
 
 	if (SourceControlState.IsValid() && SourceControlState->IsSourceControlled() && SourceControlState->IsCheckedOut())
 	{
+		// TODO: The idiomatic way of checking if the file was modified would be to use SourceControlState->IsModified()
+		// But that did not work in a reliable way with Perforce even when retrying with waiting up to 5 seconds and still the file was
+		// reverted even if it was modified. Relying on the provided bool bWasFileModified is a workaround to make this reliable.
+		
 		if (bWasFileModified)
 		{
 			// File is modified, do NOT revert it
@@ -560,13 +562,7 @@ void UTolgeeEditorIntegrationSubsystem::OnMainFrameReady(TSharedPtr<SWindow> InR
 #endif
 }
 
-// NOTE(robinwassen): bWasModified returns if Translations.json was updated or not which is used by the
-// source control logic
-//
-// Reason for returning that value is that SourceControlProvider returns IsModified = false
-// even when there is a modification for some reason, making the check for if the file should be reverted
-// in Perforce very unreliable.
-void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations(bool& bWasModified)
+bool UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations()
 {
 	const UTolgeeLocalizationSubsystem* LocalizationSubsystem = GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>();
 	while (LocalizationSubsystem->GetLocalizedDictionary().Keys.Num() == 0)
@@ -585,7 +581,7 @@ void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations(bool& bWasModifi
 	if (!FJsonObjectConverter::UStructToJsonObjectString(Dictionary, JsonString))
 	{
 		UE_LOG(LogTolgee, Error, TEXT("Couldn't convert the localized dictionary to string"));
-		return;
+		return false;
 	}
 
 	const FString Filename = TolgeeUtils::GetLocalizationSourceFile();
@@ -599,12 +595,12 @@ void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations(bool& bWasModifi
 		}
 	}
 
-	bWasModified = BeforeHash != FMD5::HashAnsiString(*JsonString);
+	bool wasModified = BeforeHash != FMD5::HashAnsiString(*JsonString);
 	
 	if (!FFileHelper::SaveStringToFile(JsonString, *Filename))
 	{
 		UE_LOG(LogTolgee, Error, TEXT("Couldn't save the localized dictionary to file: %s"), *Filename);
-		return;
+		return false;
 	}
 
 	const FDirectoryPath TolgeeLocalizationPath = TolgeeUtils::GetLocalizationDirectory();
@@ -621,9 +617,10 @@ void UTolgeeEditorIntegrationSubsystem::ExportLocalTranslations(bool& bWasModifi
 		ProjectPackagingSettings->DirectoriesToAlwaysStageAsNonUFS.Add(TolgeeLocalizationPath);
 		ProjectPackagingSettings->SaveConfig();
 	}
-
-
+	
 	UE_LOG(LogTolgee, Display, TEXT("Localized dictionary succesfully saved to file: %s"), *Filename);
+
+	return wasModified;
 }
 
 void UTolgeeEditorIntegrationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
