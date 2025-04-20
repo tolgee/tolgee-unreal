@@ -1,4 +1,4 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+﻿// Copyright (c) Tolgee 2022-2025. All Rights Reserved.
 
 #include "TolgeeLog.h"
 

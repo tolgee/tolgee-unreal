@@ -1,29 +1,29 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+﻿// Copyright (c) Tolgee 2022-2025. All Rights Reserved.
 
 using UnrealBuildTool;
 
 public class Tolgee : ModuleRules
 {
-    public Tolgee(ReadOnlyTargetRules Target) : base(Target)
-    {
-        PublicDependencyModuleNames.AddRange(
-            new string[]
-            {
-                "Core", 
-                "DeveloperSettings", 
-                "HTTP",
-            }
-        );
+	public Tolgee(ReadOnlyTargetRules Target) : base(Target)
+	{
+		PublicDependencyModuleNames.AddRange(
+			new string[]
+			{
+				"Core", 
+				"CoreUObject",
+				"DeveloperSettings", 
+				"Engine",
+				"HTTP",
+				"Localization",
+				"Json",
+				"JsonUtilities",
+				"Projects",
+			}
+		);
 
-        PrivateDependencyModuleNames.AddRange(
-            new string[]
-            {
-                "CoreUObject",
-                "Engine",
-                "Json",
-                "JsonUtilities",
-                "Projects",
-            }
-        );
-    }
+		if (Target.bBuildEditor)
+		{
+			PublicDependencyModuleNames.Add("UnrealEd");
+		}
+	}
 }

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+﻿// Copyright (c) Tolgee 2022-2025. All Rights Reserved.
 
 #pragma once
 
@@ -12,18 +12,18 @@ class SWebBrowser;
 class STolgeeTranslationTab : public SDockTab
 {
 public:
-	SLATE_BEGIN_ARGS(STolgeeTranslationTab) {}
+	SLATE_BEGIN_ARGS(STolgeeTranslationTab)
+		{
+		}
+
 	SLATE_END_ARGS()
+
 	/**
 	 * @brief Constructs the translation dashboard widget
 	 */
 	void Construct(const FArguments& InArgs);
 
 private:
-	/**
-	 * @brief Callback executed when the DockTab is activated
-	 */
-	void ActiveTab();
 	/**
 	 * @brief Callback executed when the DockTab is deactivated
 	 */
@@ -37,6 +37,18 @@ private:
 	 */
 	void DebugDrawCallback(UCanvas* Canvas, APlayerController* PC);
 	/**
+	 * Runs an asynchronous request to find the matching Url to the given TolgeeKeyId.
+	 */
+	void ShowWidgetForAsync(const FString& TolgeeKeyId);
+	/**
+	 * Updates the browser widget to display the Tolgee web editor for the given key.
+	 */
+	void ShowWidgetFor(const FString& TolgeeKeyId);
+	/**
+	 * Finds the project id for the given TolgeeKeyId.
+	 */
+	FString FindProjectIdFor(const FString& TolgeeKeyId) const;
+	/**
 	 * @brief Handle for the registered debug callback
 	 */
 	FDelegateHandle DrawHandle;
@@ -44,4 +56,8 @@ private:
 	 * @brief Browser widget used to display tolgee web editor
 	 */
 	TSharedPtr<SWebBrowser> Browser;
+	/**
+	 * Flag used to prevent multiple requests from being sent at the same time.
+	 */
+	TAtomic<bool> bRequestInProgress = false;
 };

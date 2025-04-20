@@ -1,16 +1,19 @@
-// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+// Copyright (c) Tolgee 2022-2025. All Rights Reserved.
 
 #include "STolgeeTranslationTab.h"
 
 #include <Debug/DebugDrawService.h>
-#include <Engine/Canvas.h>
-#include <SWebBrowser.h>
 #include <DrawDebugHelpers.h>
+#include <HttpModule.h>
+#include <Interfaces/IHttpResponse.h>
+#include <Internationalization/TextNamespaceUtil.h>
 #include <Misc/EngineVersionComparison.h>
+#include <PlatformHttp.h>
+#include <SWebBrowser.h>
 
-#include "TolgeeLocalizationSubsystem.h"
+#include "TolgeeEditorIntegrationSubsystem.h"
+#include "TolgeeEditorSettings.h"
 #include "TolgeeLog.h"
-#include "TolgeeUtils.h"
 
 namespace
 {
@@ -19,25 +22,24 @@ namespace
 
 void STolgeeTranslationTab::Construct(const FArguments& InArgs)
 {
-	ActiveTab();
+	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
+	const FString LoginUrl = FString::Printf(TEXT("%s/login"), *Settings->ApiUrl);
+
+	DrawHandle = UDebugDrawService::Register(TEXT("Game"), FDebugDrawDelegate::CreateSP(this, &STolgeeTranslationTab::DebugDrawCallback));
+
 	// clang-format off
 	SDockTab::Construct( SDockTab::FArguments()
 		.TabRole(NomadTab)
 		.OnTabClosed_Raw(this, &STolgeeTranslationTab::CloseTab)
 	[
 		SAssignNew(Browser, SWebBrowser)
-		.InitialURL(TolgeeUtils::GetUrlEndpoint(TEXT("login")))
+		.InitialURL(LoginUrl)
 		.ShowControls(false)
 		.ShowErrorMessage(true)
 	]);
 	// clang-format on
 
 	FGlobalTabmanager::Get()->OnActiveTabChanged_Subscribe(FOnActiveTabChanged::FDelegate::CreateSP(this, &STolgeeTranslationTab::OnActiveTabChanged));
-}
-
-void STolgeeTranslationTab::ActiveTab()
-{
-	DrawHandle = UDebugDrawService::Register(TEXT("Game"), FDebugDrawDelegate::CreateSP(this, &STolgeeTranslationTab::DebugDrawCallback));
 }
 
 void STolgeeTranslationTab::CloseTab(TSharedRef<SDockTab> DockTab)
@@ -49,19 +51,19 @@ void STolgeeTranslationTab::OnActiveTabChanged(TSharedPtr<SDockTab> PreviouslyAc
 {
 	if (PreviouslyActive == AsShared())
 	{
-		GEngine->GetEngineSubsystem<UTolgeeLocalizationSubsystem>()->ManualFetch();
+		GEngine->GetEngineSubsystem<UTolgeeEditorIntegrationSubsystem>()->ManualFetch();
 	}
 }
 
 void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController* PC)
 {
-	if(!GEngine->GameViewport)
+	if (!GEngine->GameViewport)
 	{
 		return;
 	}
 
 	TSharedPtr<SViewport> GameViewportWidget = GEngine->GameViewport->GetGameViewportWidget();
-	if(!GameViewportWidget.IsValid())
+	if (!GameViewportWidget.IsValid())
 	{
 		return;
 	}
@@ -89,8 +91,8 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 			// TODO: make this a setting
 			const FVector2D Padding = FVector2D{0.2f, 0.2f};
 
-			const FVector2D UpperLeft = { 0, 0 };
-			const FVector2D LowerRight = { 1, 1 };
+			const FVector2D UpperLeft = {0, 0};
+			const FVector2D LowerRight = {1, 1};
 
 			FVector2D Start = HoveredGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) - ViewportGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) + Padding;
 			FVector2D End = HoveredGeometry.GetAbsolutePositionAtCoordinates(LowerRight) - ViewportGeometry.GetAbsolutePositionAtCoordinates(UpperLeft) - Padding;
@@ -105,17 +107,108 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 			const TOptional<FString> Namespace = FTextInspector::GetNamespace(CurrentText);
 			const TOptional<FString> Key = FTextInspector::GetKey(CurrentText);
 
-			// Update the browser widget if the current state allows
-
-			const FString EndPoint = FString::Printf(TEXT("translations/single?key=%s&ns=%s"), *Key.Get(""), *Namespace.Get(""));
-			const FString NewUrl = TolgeeUtils::GetProjectUrlEndpoint(EndPoint);
-			const FString CurrentUrl = Browser->GetUrl();
-			if (NewUrl != CurrentUrl && Browser->IsLoaded())
+			// Update the browser widget if we have valid data and the URL is different
+			if (Namespace && Key)
 			{
-				UE_LOG(LogTolgee, Log, TEXT("CurrentWidget: %s Namespace: %s Key: %s"), *CurrentTextBlock->GetText().ToString(), *Namespace.Get(""), *Key.Get(""));
+				const FString CleanNamespace = TextNamespaceUtil::StripPackageNamespace(Namespace.GetValue());
 
-				Browser->LoadURL(NewUrl);
+				// NOTE: This might look odd, but we need to mirror the id's used internally by Unreal as those are used for importing the key.
+				const FString TolgeeKeyId = FPlatformHttp::UrlEncode(FString::Printf(TEXT("%s,%s"), *CleanNamespace, *Key.GetValue()));
+
+				ShowWidgetForAsync(TolgeeKeyId);
 			}
 		}
 	}
+}
+
+void STolgeeTranslationTab::ShowWidgetForAsync(const FString& TolgeeKeyId)
+{
+	AsyncTask(ENamedThreads::AnyBackgroundHiPriTask,
+	          [this, TolgeeKeyId]()
+	          {
+		          ShowWidgetFor(TolgeeKeyId);
+	          });
+}
+
+void STolgeeTranslationTab::ShowWidgetFor(const FString& TolgeeKeyId)
+{
+	if (bRequestInProgress)
+	{
+		return;
+	}
+
+	TGuardValue ScopedRequestProgress(bRequestInProgress, true);
+
+	const FString ProjectId = FindProjectIdFor(TolgeeKeyId);
+	if (ProjectId.IsEmpty())
+	{
+		UE_LOG(LogTolgee, Warning, TEXT("No project found for key '%s'"), *TolgeeKeyId);
+		return;
+	}
+
+	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
+
+	const FString NewUrl = FString::Printf(TEXT("%s/projects/%s/translations/single?key=%s"), *Settings->ApiUrl, *ProjectId, *TolgeeKeyId);
+	const FString CurrentUrl = Browser->GetUrl();
+
+	if (NewUrl != CurrentUrl && Browser->IsLoaded())
+	{
+		UE_LOG(LogTolgee, Log, TEXT("CurrentWidget displayed from %s"), *NewUrl);
+
+		Browser->LoadURL(NewUrl);
+	}
+}
+
+FString STolgeeTranslationTab::FindProjectIdFor(const FString& TolgeeKeyId) const
+{
+	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
+
+	TMap<FString, FHttpRequestPtr> PendingRequests;
+	for (const FString& ProjectId : Settings->ProjectIds)
+	{
+		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/translations?filterKeyName=%s"), *Settings->ApiUrl, *ProjectId, *TolgeeKeyId);
+
+		const FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
+		HttpRequest->SetVerb("GET");
+		HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
+		HttpRequest->SetURL(RequestUrl);
+		HttpRequest->ProcessRequest();
+
+		PendingRequests.Add(ProjectId, HttpRequest);
+	}
+
+	while (!PendingRequests.IsEmpty())
+	{
+		FPlatformProcess::Sleep(0.1f);
+
+		for (auto RequestIt = PendingRequests.CreateIterator(); RequestIt; ++RequestIt)
+		{
+			const TPair<FString, FHttpRequestPtr> Pair = *RequestIt;
+			const FHttpRequestPtr Request = Pair.Value;
+			const FString& ProjectId = Pair.Key;
+
+			if (EHttpRequestStatus::IsFinished(Request->GetStatus()))
+			{
+				const FHttpResponsePtr Response = Request->GetResponse();
+				const FString ResponseContent = Response.IsValid() ? Response->GetContentAsString() : FString();
+
+				const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(ResponseContent);
+				TSharedPtr<FJsonObject> JsonObject;
+
+				if (FJsonSerializer::Deserialize(JsonReader, JsonObject))
+				{
+					const TSharedPtr<FJsonObject> Embedded = JsonObject->GetObjectField(TEXT("_embedded"));
+					const TArray<TSharedPtr<FJsonValue>> Keys = Embedded->GetArrayField(TEXT("keys"));
+					if (!Keys.IsEmpty())
+					{
+						return ProjectId;
+					}
+				}
+
+				RequestIt.RemoveCurrent();
+			}
+		}
+	}
+
+	return {};
 }
