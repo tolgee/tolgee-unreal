@@ -2,8 +2,11 @@
 
 #include "TolgeeLocalizationInjectorSubsystem.h"
 
+#include <Async/Async.h>
+#include <Engine/World.h>
 #include <PortableObjectFormatDOM.h>
 #include <PortableObjectPipeline.h>
+#include <Internationalization/TextLocalizationResource.h>
 
 #include "TolgeeLog.h"
 #include "TolgeeTextSource.h"
