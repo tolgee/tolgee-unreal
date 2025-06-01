@@ -117,10 +117,7 @@ TArray<FTolgeeTranslationData> UTolgeeLocalizationInjectorSubsystem::ExtractTran
 		Result.Add(TranslationData);
 	}
 #else
-	else
-	{
-		UE_LOG(LogTolgee, Error, TEXT("Localization module is not available. Cannot extract translations from PO content."));
-	}
+	UE_LOG(LogTolgee, Error, TEXT("Localization module is not available. Cannot extract translations from PO content."));
 #endif
 
 	return Result;
