@@ -2,8 +2,6 @@
 
 #include "TolgeeTextSource.h"
 
-#include <Internationalization/TextLocalizationResource.h>
-
 int32 FTolgeeTextSource::GetPriority() const
 {
 	//NOTE: you might expect to see ::Highest, but we actually want to be the last one to load resources so we can re-use the existing SourceStringHash
