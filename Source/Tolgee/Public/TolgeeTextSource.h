@@ -4,7 +4,7 @@
 
 #include <Internationalization/ILocalizedTextSource.h>
 
-#include <Internationalization/TextLocalizationResource.h>
+#include "CoreMinimal.h"
 
 using FGetLocalizedResources = TDelegate<void(const ELocalizationLoadFlags InLoadFlags, TArrayView<const FString> InPrioritizedCultures, FTextLocalizationResource& InOutNativeResource, FTextLocalizationResource& InOutLocalizedResource)>;
 
