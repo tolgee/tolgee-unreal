@@ -33,3 +33,9 @@ FString TolgeeUtils::GetSdkVersion()
 	const TSharedPtr<IPlugin> TolgeePlugin = IPluginManager::Get().FindPlugin("Tolgee");
 	return TolgeePlugin->GetDescriptor().VersionName;
 }
+
+void TolgeeUtils::AddSdkHeaders(FHttpRequestRef& HttpRequest)
+{
+	HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Type"), GetSdkType());
+	HttpRequest->SetHeader(TEXT("X-Tolgee-SDK-Version"), GetSdkVersion());
+}

@@ -11,6 +11,7 @@
 #include "TolgeeEditorSettings.h"
 #include "TolgeeLog.h"
 #include "TolgeeRuntimeSettings.h"
+#include "TolgeeUtils.h"
 
 void UTolgeeEditorIntegrationSubsystem::ManualFetch()
 {
@@ -67,10 +68,12 @@ void UTolgeeEditorIntegrationSubsystem::FetchFromDashboard(const FString& Projec
 {
 	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
 
-	const FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
+	FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
+	HttpRequest->SetURL(RequestUrl);
 	HttpRequest->SetVerb("GET");
 	HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
-	HttpRequest->SetURL(RequestUrl);
+	TolgeeUtils::AddSdkHeaders(HttpRequest);
+
 	HttpRequest->OnProcessRequestComplete().BindUObject(this, &ThisClass::OnFetchedFromDashboard, ProjectId);
 	HttpRequest->ProcessRequest();
 
@@ -182,10 +185,12 @@ void UTolgeeEditorIntegrationSubsystem::FetchIfProjectsWereUpdated()
 	{
 		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/stats"), *Settings->ApiUrl, *ProjectId);
 
-		const FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
+		FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 		HttpRequest->SetVerb("GET");
-		HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
 		HttpRequest->SetURL(RequestUrl);
+		HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
+		TolgeeUtils::AddSdkHeaders(HttpRequest);
+
 		HttpRequest->ProcessRequest();
 
 		PendingRequests.Add(HttpRequest);

@@ -4,6 +4,8 @@
 
 #include <CoreMinimal.h>
 
+#include <Interfaces/IHttpRequest.h>
+
 namespace TolgeeUtils
 {
 	/**
@@ -18,4 +20,8 @@ namespace TolgeeUtils
 	 * @brief Sdk version of the Tolgee integration
 	 */
 	FString TOLGEE_API GetSdkVersion();
+	/**
+	 * Adds the Tolgee SDK type and version to the headers of the request
+	 */
+	void TOLGEE_API AddSdkHeaders(FHttpRequestRef& HttpRequest);
 } // namespace TolgeeUtils

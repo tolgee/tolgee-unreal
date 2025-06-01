@@ -10,6 +10,7 @@
 #include "TolgeeEditorSettings.h"
 #include "TolgeeLog.h"
 #include "TolgeeProviderUtils.h"
+#include "TolgeeUtils.h"
 
 FName FTolgeeProviderUploadFileWorker::GetName() const
 {
@@ -68,6 +69,7 @@ bool FTolgeeProviderUploadFileWorker::Execute(FTolgeeProviderLocalizationService
 	HttpRequest->SetURL(Url);
 	HttpRequest->SetVerb(TEXT("POST"));
 	HttpRequest->SetHeader(TEXT("X-API-Key"), ProviderSettings->ApiKey);
+	TolgeeUtils::AddSdkHeaders(HttpRequest);
 
 	const FString Boundary = "---------------------------" + FString::FromInt(FDateTime::Now().GetTicks());
 	TolgeeProviderUtils::AddMultiRequestHeader(HttpRequest, Boundary);
@@ -137,6 +139,7 @@ bool FTolgeeProviderDownloadFileWorker::Execute(FTolgeeProviderLocalizationServi
 	HttpRequest->SetVerb(TEXT("POST"));
 	HttpRequest->SetHeader(TEXT("X-API-Key"), ProviderSettings->ApiKey);
 	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	TolgeeUtils::AddSdkHeaders(HttpRequest);
 
 	TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
 	Body->SetBoolField(TEXT("escapeHtml"), false);

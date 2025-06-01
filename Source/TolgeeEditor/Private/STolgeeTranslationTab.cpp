@@ -14,6 +14,7 @@
 #include "TolgeeEditorIntegrationSubsystem.h"
 #include "TolgeeEditorSettings.h"
 #include "TolgeeLog.h"
+#include "TolgeeUtils.h"
 
 namespace
 {
@@ -168,10 +169,12 @@ FString STolgeeTranslationTab::FindProjectIdFor(const FString& TolgeeKeyId) cons
 	{
 		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/translations?filterKeyName=%s"), *Settings->ApiUrl, *ProjectId, *TolgeeKeyId);
 
-		const FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
+		FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 		HttpRequest->SetVerb("GET");
-		HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
 		HttpRequest->SetURL(RequestUrl);
+		HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
+		TolgeeUtils::AddSdkHeaders(HttpRequest);
+
 		HttpRequest->ProcessRequest();
 
 		PendingRequests.Add(ProjectId, HttpRequest);
