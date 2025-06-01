@@ -14,7 +14,6 @@ public class Tolgee : ModuleRules
 				"DeveloperSettings", 
 				"Engine",
 				"HTTP",
-				"Localization",
 				"Json",
 				"JsonUtilities",
 				"Projects",
@@ -24,6 +23,17 @@ public class Tolgee : ModuleRules
 		if (Target.bBuildEditor)
 		{
 			PublicDependencyModuleNames.Add("UnrealEd");
+		}
+
+		bool bLocalizationModuleAvailable = !Target.bIsEngineInstalled || Target.Configuration != UnrealTargetConfiguration.Shipping;
+		if (bLocalizationModuleAvailable)
+		{
+			PublicDefinitions.Add("WITH_LOCALIZATION_MODULE=1");
+			PublicDependencyModuleNames.Add("Localization");
+		}
+		else
+		{
+			PublicDefinitions.Add("WITH_LOCALIZATION_MODULE=0");
 		}
 	}
 }

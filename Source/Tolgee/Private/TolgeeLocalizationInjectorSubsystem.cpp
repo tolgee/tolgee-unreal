@@ -4,9 +4,12 @@
 
 #include <Async/Async.h>
 #include <Engine/World.h>
+#include <Internationalization/TextLocalizationResource.h>
+
+#if WITH_LOCALIZATION_MODULE
 #include <PortableObjectFormatDOM.h>
 #include <PortableObjectPipeline.h>
-#include <Internationalization/TextLocalizationResource.h>
+#endif
 
 #include "TolgeeLog.h"
 #include "TolgeeTextSource.h"
@@ -91,6 +94,7 @@ TArray<FTolgeeTranslationData> UTolgeeLocalizationInjectorSubsystem::ExtractTran
 
 	TArray<FTolgeeTranslationData> Result;
 
+#if WITH_LOCALIZATION_MODULE
 	FPortableObjectFormatDOM PortableObject;
 	PortableObject.FromString(PoContent);
 
@@ -112,6 +116,12 @@ TArray<FTolgeeTranslationData> UTolgeeLocalizationInjectorSubsystem::ExtractTran
 
 		Result.Add(TranslationData);
 	}
+#else
+	else
+	{
+		UE_LOG(LogTolgee, Error, TEXT("Localization module is not available. Cannot extract translations from PO content."));
+	}
+#endif
 
 	return Result;
 }
