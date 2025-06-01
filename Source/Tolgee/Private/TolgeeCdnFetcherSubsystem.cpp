@@ -29,6 +29,8 @@ void UTolgeeCdnFetcherSubsystem::OnGameInstanceStart(UGameInstance* GameInstance
 void UTolgeeCdnFetcherSubsystem::OnGameInstanceEnd(bool bIsSimulating)
 {
 	ResetData();
+
+	LastModifiedDates.Empty();
 }
 
 TMap<FString, TArray<FTolgeeTranslationData>> UTolgeeCdnFetcherSubsystem::GetDataToInject() const
@@ -113,5 +115,4 @@ void UTolgeeCdnFetcherSubsystem::ResetData()
 	NumRequestsCompleted = 0;
 
 	CachedTranslations.Empty();
-	LastModifiedDates.Empty();
 }
