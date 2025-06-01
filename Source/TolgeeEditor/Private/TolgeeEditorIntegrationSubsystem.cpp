@@ -213,7 +213,7 @@ void UTolgeeEditorIntegrationSubsystem::FetchIfProjectsWereUpdated()
 				if (FJsonSerializer::Deserialize(JsonReader, JsonObject))
 				{
 					const TArray<TSharedPtr<FJsonValue>> LanguageStats = JsonObject->GetArrayField(TEXT("languageStats"));
-					for (const auto Language : LanguageStats)
+					for (const TSharedPtr<FJsonValue>& Language : LanguageStats)
 					{
 						const double LanguageUpdateTime = Language->AsObject()->GetNumberField(TEXT("translationsUpdatedAt"));
 						const int64 UnixTimestampSeconds = LanguageUpdateTime / 1000;
