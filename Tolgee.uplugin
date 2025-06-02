@@ -1,35 +1,56 @@
 {
-  "FileVersion": 3,
-  "VersionName": "0.1",
-  "EngineVersion": "5.3",
-  "FriendlyName": "Tolgee",
-  "Description": "Localization tool which makes the localization process simple. Easy to integrate to React, Angular and other applications.",
-  "Category" : "Localization",
-  "CreatedBy": "Tolgee",
-  "CreatedByURL": "https://tolgee.io/",
-  "DocsURL": "https://tolgee.io/integrations/unreal",
-  "MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/2757e202f8f3408bbf66f65d26223398",
-  "SupportURL": "https://tolg.ee/slack",
-  "EnabledByDefault": false,
-  "CanContainContent": false,
-  "Modules": [
-    {
-      "Name": "Tolgee",
-      "Type": "Runtime",
-      "LoadingPhase": "Default",
-      "WhitelistPlatforms": [ "Android", "IOS", "Linux", "Mac", "TVOS", "Win64" ]
-    },
-    {
-      "Name": "TolgeeEditor",
-      "Type": "Editor",
-      "LoadingPhase": "Default",
-      "WhitelistPlatforms": [ "Win64", "Mac", "Linux" ]
-    }
-  ],
-  "Plugins": [
-    {
-      "Name": "WebBrowserWidget",
-      "Enabled": true
-    }
-  ]
+	"FileVersion": 3,
+	"VersionName": "0.0",
+	"EngineVersion": "5.5",
+	"FriendlyName": "Tolgee",
+	"Description": "Localization tool which makes the localization process simple. Easy to integrate to React, Angular and other applications.",
+	"Category": "Localization",
+	"CreatedBy": "Tolgee",
+	"CreatedByURL": "https://tolgee.io/",
+	"DocsURL": "https://tolgee.io/integrations/unreal",
+	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/2757e202f8f3408bbf66f65d26223398",
+	"SupportURL": "https://tolg.ee/slack",
+	"EnabledByDefault": false,
+	"CanContainContent": false,
+	"Modules": [
+		{
+			"Name": "Tolgee",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Android",
+				"IOS",
+				"Linux",
+				"Mac",
+				"TVOS",
+				"Win64"
+			]
+		},
+		{
+			"Name": "TolgeeEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Linux",
+				"Mac",
+				"Win64"
+			]
+		},
+		{
+			"Name": "TolgeeProvider",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "WebBrowserWidget",
+			"Enabled": true
+		}
+	]
 }

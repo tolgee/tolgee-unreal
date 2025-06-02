@@ -1,4 +1,4 @@
-// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+// Copyright (c) Tolgee 2022-2025. All Rights Reserved.
 
 #include "TolgeeEditor.h"
 
@@ -6,31 +6,14 @@
 #include <Interfaces/IPluginManager.h>
 
 #include "STolgeeTranslationTab.h"
-#include "TolgeeEditorIntegrationSubsystem.h"
-#include "TolgeeLocalizationSubsystem.h"
-#include "TolgeeSettings.h"
+#include "TolgeeEditorSettings.h"
 #include "TolgeeStyle.h"
-#include "TolgeeUtils.h"
 
 #define LOCTEXT_NAMESPACE "Tolgee"
 
 namespace
 {
 	const FName MenuTabName = FName("TolgeeDashboardMenuTab");
-}
-
-FTolgeeEditorModule& FTolgeeEditorModule::Get()
-{
-	static const FName TolgeeEditorModuleName = "TolgeeEditor";
-	return FModuleManager::LoadModuleChecked<FTolgeeEditorModule>(TolgeeEditorModuleName);
-}
-
-void FTolgeeEditorModule::ActivateWindowTab()
-{
-	if (FGlobalTabmanager::Get()->HasTabSpawner(MenuTabName))
-	{
-		FGlobalTabmanager::Get()->TryInvokeTab(MenuTabName);
-	}
 }
 
 void FTolgeeEditorModule::StartupModule()
@@ -72,7 +55,7 @@ void FTolgeeEditorModule::RegisterWindowExtension()
 	// clang-format off
 	DashboardTab.SetDisplayName(LOCTEXT("DashboardName", "Tolgee Dashboard"))
 		.SetTooltipText(LOCTEXT("DashboardTooltip", "Get an overview of your project state in a separate tab."))
-		.SetIcon(FSlateIcon(FTolgeeStyle::GetStyleSetName(), "Tolgee.Settings"))
+		.SetIcon(FSlateIcon(FTolgeeStyle::Get().GetStyleSetName(), "Tolgee.Settings"))
 		.SetMenuType(ETabSpawnerMenuType::Hidden);
 	// clang-format on
 }
@@ -120,18 +103,7 @@ void FTolgeeEditorModule::ExtendToolbar(FToolBarBuilder& Builder)
 				FMenuBuilder MenuBuilder(true, NULL);
 
 				MenuBuilder.AddMenuEntry(
-					LOCTEXT("WebDashboard", "Web dashboard"),
-					LOCTEXT("WebDashboardTip", "Launches the Tolgee dashboard in your browser"),
-					FSlateIcon(),
-					FUIAction(FExecuteAction::CreateLambda(
-						[]()
-						{
-							FPlatformProcess::LaunchURL(*TolgeeUtils::GetProjectUrlEndpoint(), nullptr, nullptr);
-						}
-					))
-				);
-				MenuBuilder.AddMenuEntry(
-					LOCTEXT("TranslationDashboard", "Translation Dashboard"),
+					LOCTEXT("TranslationDashboard", "Translation Tab"),
 					LOCTEXT("TranslationDashboardTip", "Open a translation widget inside Unreal which allows you translate text by hovering on top"),
 					FSlateIcon(),
 					FUIAction(FExecuteAction::CreateLambda(
@@ -141,6 +113,20 @@ void FTolgeeEditorModule::ExtendToolbar(FToolBarBuilder& Builder)
 						}
 					))
 				);
+
+				MenuBuilder.AddMenuEntry(
+					LOCTEXT("WebDashboard", "Web dashboard"),
+					LOCTEXT("WebDashboardTip", "Launches the Tolgee dashboard in your browser"),
+					FSlateIcon(),
+					FUIAction(FExecuteAction::CreateLambda(
+						[]()
+						{
+							const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
+							FPlatformProcess::LaunchURL(*Settings->ApiUrl, nullptr, nullptr);
+						}
+					))
+				);
+
 				MenuBuilder.AddMenuEntry(
 					LOCTEXT("OpenSettings", "Open Settings"),
 					LOCTEXT("OpenSettingsTip", "Open the plugin settings section"),
@@ -148,10 +134,12 @@ void FTolgeeEditorModule::ExtendToolbar(FToolBarBuilder& Builder)
 					FUIAction(FExecuteAction::CreateLambda(
 						[]()
 						{
-							UTolgeeSettings::OpenSettings();
+							//TODO: Enable this after settings get unified
+							//UTolgeeSettings::OpenSettings();
 						}
 					))
 				);
+
 				MenuBuilder.AddMenuEntry(
 					LOCTEXT("OpenDocumentation", "Open Documentation"),
 					LOCTEXT("OpenDocumentationTip", "Open a step by step guide on how to use our integration"),
@@ -165,6 +153,7 @@ void FTolgeeEditorModule::ExtendToolbar(FToolBarBuilder& Builder)
 						}
 					))
 				);
+
 				MenuBuilder.AddMenuEntry(
 					LOCTEXT("GetSupport", "Get support"),
 					LOCTEXT("GetSupportTip", "Join our slack and get support directly"),
@@ -178,6 +167,7 @@ void FTolgeeEditorModule::ExtendToolbar(FToolBarBuilder& Builder)
 						}
 					))
 				);
+
 				MenuBuilder.AddMenuEntry(
 					LOCTEXT("ReportIssue", "Report issue"),
 					LOCTEXT("ReportIssueTip", "Report an issue on our GitHub"),
@@ -190,36 +180,12 @@ void FTolgeeEditorModule::ExtendToolbar(FToolBarBuilder& Builder)
 					))
 				);
 
-				MenuBuilder.AddMenuEntry(
-					LOCTEXT("Syncronize", "Syncronize"),
-					LOCTEXT("SyncronizeTip", "Syncronizes the state between local state and Tolgee backend, reconciling any differences"),
-					FSlateIcon(),
-					FUIAction(FExecuteAction::CreateLambda(
-						[]()
-						{
-							GEditor->GetEditorSubsystem<UTolgeeEditorIntegrationSubsystem>()->Sync();
-						}
-					))
-				);
-				
-				MenuBuilder.AddMenuEntry(
-					LOCTEXT("DownloadTranslations", "Download Translations.json"),
-					LOCTEXT("DownloadTranslationsTip", "Download the latest Translations.json file from Tolgee and add it to VCS"),
-					FSlateIcon(),
-					FUIAction(FExecuteAction::CreateLambda(
-						[]()
-						{
-							GEditor->GetEditorSubsystem<UTolgeeEditorIntegrationSubsystem>()->DownloadTranslationsJson();
-						}
-					))
-				);
-
 				return MenuBuilder.MakeWidget();
 			}
 		),
 		LOCTEXT("TolgeeDashboardSettingsCombo", "Tolgee Settings"),
 		LOCTEXT("TolgeeDashboardSettingsCombo_ToolTip", "Tolgee Dashboard settings"),
-		FSlateIcon(FTolgeeStyle::GetStyleSetName(), "Tolgee.Settings"),
+		FSlateIcon(FTolgeeStyle::Get().GetStyleSetName(), "Tolgee.Settings"),
 		false
 	);
 }

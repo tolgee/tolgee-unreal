@@ -1,4 +1,4 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+﻿// Copyright (c) Tolgee 2022-2025. All Rights Reserved.
 
 #pragma once
 
@@ -9,17 +9,6 @@
  */
 class FTolgeeEditorModule : public IModuleInterface
 {
-public:
-	/**
-	 * Gets a reference to the Tolgee Editor module instance
-	 */
-	static FTolgeeEditorModule& Get();
-	/**
-	 * Spawns the Tolgee widget or draws attention to it if it's already spawned
-	 */
-	void ActivateWindowTab();
-
-private:
 	// Begin IModuleInterface interface
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;

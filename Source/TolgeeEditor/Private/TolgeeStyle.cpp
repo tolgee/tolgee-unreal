@@ -1,4 +1,4 @@
-﻿// Copyright (c) Tolgee 2022-2023. All Rights Reserved.
+﻿// Copyright (c) Tolgee 2022-2025. All Rights Reserved.
 
 #include "TolgeeStyle.h"
 
@@ -6,43 +6,49 @@
 #include <Styling/ISlateStyle.h>
 #include <Styling/SlateStyle.h>
 #include <Styling/SlateStyleRegistry.h>
+#include <Styling/SlateStyleMacros.h>
 
-TSharedPtr<FSlateStyleSet> FTolgeeStyle::StyleSet = nullptr;
+FName FTolgeeStyle::StyleName("TolgeeStyle");
+TUniquePtr<FTolgeeStyle> FTolgeeStyle::Inst(nullptr);
 
-TSharedPtr<class ISlateStyle> FTolgeeStyle::Get()
+const FName& FTolgeeStyle::GetStyleSetName() const
 {
-	return StyleSet;
+	return StyleName;
 }
 
-FName FTolgeeStyle::GetStyleSetName()
+const FTolgeeStyle& FTolgeeStyle::Get()
 {
-	static FName TolgeeStyleName(TEXT("TolgeeStyle"));
-	return TolgeeStyleName;
+	ensure(Inst.IsValid());
+	return *Inst.Get();
 }
 
 void FTolgeeStyle::Initialize()
 {
-	// Only register once
-	if (StyleSet.IsValid())
+	if (!Inst.IsValid())
 	{
-		return;
+		Inst = TUniquePtr<FTolgeeStyle>(new FTolgeeStyle);
 	}
-
-	StyleSet = MakeShared<FSlateStyleSet>(GetStyleSetName());
-	FString Root = IPluginManager::Get().FindPlugin(TEXT("Tolgee"))->GetBaseDir() / TEXT("Resources");
-
-	StyleSet->Set("Tolgee.Settings", new FSlateImageBrush(FName(*(Root + "/Settings-Icon.png")), FVector2D(64, 64)));
-
-	FSlateStyleRegistry::RegisterSlateStyle(*StyleSet.Get());
-};
-
+}
 
 void FTolgeeStyle::Shutdown()
 {
-	if (StyleSet.IsValid())
+	if (Inst.IsValid())
 	{
-		FSlateStyleRegistry::UnRegisterSlateStyle(*StyleSet.Get());
-		ensure(StyleSet.IsUnique());
-		StyleSet.Reset();
+		FSlateStyleRegistry::UnRegisterSlateStyle(*Inst.Get());
+		Inst.Reset();
 	}
+}
+
+FTolgeeStyle::FTolgeeStyle() : FSlateStyleSet(StyleName)
+{
+
+	SetParentStyleName(FAppStyle::GetAppStyleSetName());
+
+	FSlateStyleSet::SetContentRoot(IPluginManager::Get().FindPlugin(TEXT("Tolgee"))->GetBaseDir() / TEXT("Resources"));
+
+	{
+		Set("Tolgee.Settings", new IMAGE_BRUSH("Settings-Icon", FVector2D(64, 64)));
+	}
+
+	FSlateStyleRegistry::RegisterSlateStyle(*this);
 }
