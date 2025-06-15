@@ -4,6 +4,7 @@
 
 #include <Async/Async.h>
 #include <Engine/World.h>
+#include <Misc/EngineVersionComparison.h>
 #include <Internationalization/TextLocalizationResource.h>
 
 #if WITH_LOCALIZATION_MODULE
@@ -45,7 +46,14 @@ void UTolgeeLocalizationInjectorSubsystem::GetLocalizedResources(const ELocaliza
 			}
 			else
 			{
-				UE_LOG(LogTolgee, Warning, TEXT("Failed to inject translation for %s:%s. Default entry not found."), *InNamespace.ToString(), *InKey.ToString());
+#if UE_VERSION_NEWER_THAN(5, 5, 0)
+				const FString InNamespaceString = InNamespace.ToString();
+				const FString InKeyString = InKey.ToString();
+#else
+				const FString InNamespaceString = InNamespace.GetChars();
+				const FString InKeyString = InKey.GetChars();
+#endif
+				UE_LOG(LogTolgee, Warning, TEXT("Failed to inject translation for %s:%s. Default entry not found."), *InNamespaceString, *InKeyString);
 			}
 		}
 	}
