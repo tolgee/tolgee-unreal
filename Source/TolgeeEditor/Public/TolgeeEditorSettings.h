@@ -64,6 +64,13 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Tolgee|Provider")
 	TMap<FGuid, FTolgeePerTargetSettings> PerTargetSettings;
 
+	/**
+	 * Returns the ApiUrl without a trailing slash.
+	 * Use this when building API requests to avoid getting double slashes.
+	 */
+	FString GetBaseUrl() const;
+
+private:
 	// ~ Begin UDeveloperSettings Interface
 	virtual FName GetCategoryName() const override;
 	// ~ End UDeveloperSettings Interface
