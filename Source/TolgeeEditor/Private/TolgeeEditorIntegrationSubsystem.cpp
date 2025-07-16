@@ -56,7 +56,7 @@ void UTolgeeEditorIntegrationSubsystem::FetchAllProjects()
 
 	for (const FString& ProjectId : Settings->ProjectIds)
 	{
-		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/export?format=PO"), *Settings->ApiUrl, *ProjectId);
+		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/export?format=PO"), *Settings->GetBaseUrl(), *ProjectId);
 		UE_LOG(LogTolgee, Display, TEXT("Fetching localization data for project %s from Tolgee dashboard: %s"), *ProjectId, *RequestUrl);
 		FetchFromDashboard(ProjectId, RequestUrl);
 	}
@@ -183,7 +183,7 @@ void UTolgeeEditorIntegrationSubsystem::FetchIfProjectsWereUpdated()
 
 	for (const FString& ProjectId : Settings->ProjectIds)
 	{
-		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/stats"), *Settings->ApiUrl, *ProjectId);
+		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/stats"), *Settings->GetBaseUrl(), *ProjectId);
 
 		FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 		HttpRequest->SetVerb("GET");

@@ -122,7 +122,7 @@ void FTolgeeEditorModule::ExtendToolbar(FToolBarBuilder& Builder)
 						[]()
 						{
 							const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
-							FPlatformProcess::LaunchURL(*Settings->ApiUrl, nullptr, nullptr);
+							FPlatformProcess::LaunchURL(*Settings->GetBaseUrl(), nullptr, nullptr);
 						}
 					))
 				);

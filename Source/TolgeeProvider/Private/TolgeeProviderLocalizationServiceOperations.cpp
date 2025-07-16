@@ -63,7 +63,7 @@ bool FTolgeeProviderUploadFileWorker::Execute(FTolgeeProviderLocalizationService
 
 	const UTolgeeEditorSettings* ProviderSettings = GetDefault<UTolgeeEditorSettings>();
 	const FTolgeePerTargetSettings* ProjectSettings = ProviderSettings->PerTargetSettings.Find(TargetGuid);
-	const FString Url = FString::Printf(TEXT("%s/v2/projects/%s/single-step-import"), *ProviderSettings->ApiUrl, *ProjectSettings->ProjectId);
+	const FString Url = FString::Printf(TEXT("%s/v2/projects/%s/single-step-import"), *ProviderSettings->GetBaseUrl(), *ProjectSettings->ProjectId);
 
 	FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetURL(Url);
@@ -132,7 +132,7 @@ bool FTolgeeProviderDownloadFileWorker::Execute(FTolgeeProviderLocalizationServi
 	const UTolgeeEditorSettings* ProviderSettings = GetDefault<UTolgeeEditorSettings>();
 	const FTolgeePerTargetSettings* ProjectSettings = ProviderSettings->PerTargetSettings.Find(TargetGuid);
 
-	const FString Url = FString::Printf(TEXT("%s/v2/projects/%s/export"), *ProviderSettings->ApiUrl, *ProjectSettings->ProjectId);
+	const FString Url = FString::Printf(TEXT("%s/v2/projects/%s/export"), *ProviderSettings->GetBaseUrl(), *ProjectSettings->ProjectId);
 
 	FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 	HttpRequest->SetURL(Url);

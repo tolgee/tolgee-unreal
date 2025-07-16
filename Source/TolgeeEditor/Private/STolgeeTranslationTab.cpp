@@ -24,7 +24,7 @@ namespace
 void STolgeeTranslationTab::Construct(const FArguments& InArgs)
 {
 	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
-	const FString LoginUrl = FString::Printf(TEXT("%s/login"), *Settings->ApiUrl);
+	const FString LoginUrl = FString::Printf(TEXT("%s/login"), *Settings->GetBaseUrl());
 
 	DrawHandle = UDebugDrawService::Register(TEXT("Game"), FDebugDrawDelegate::CreateSP(this, &STolgeeTranslationTab::DebugDrawCallback));
 
@@ -149,7 +149,7 @@ void STolgeeTranslationTab::ShowWidgetFor(const FString& TolgeeKeyId)
 
 	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
 
-	const FString NewUrl = FString::Printf(TEXT("%s/projects/%s/translations/single?key=%s"), *Settings->ApiUrl, *ProjectId, *TolgeeKeyId);
+	const FString NewUrl = FString::Printf(TEXT("%s/projects/%s/translations/single?key=%s"), *Settings->GetBaseUrl(), *ProjectId, *TolgeeKeyId);
 	const FString CurrentUrl = Browser->GetUrl();
 
 	if (NewUrl != CurrentUrl && Browser->IsLoaded())
@@ -167,7 +167,7 @@ FString STolgeeTranslationTab::FindProjectIdFor(const FString& TolgeeKeyId) cons
 	TMap<FString, FHttpRequestPtr> PendingRequests;
 	for (const FString& ProjectId : Settings->ProjectIds)
 	{
-		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/translations?filterKeyName=%s"), *Settings->ApiUrl, *ProjectId, *TolgeeKeyId);
+		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/translations?filterKeyName=%s"), *Settings->GetBaseUrl(), *ProjectId, *TolgeeKeyId);
 
 		FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 		HttpRequest->SetVerb("GET");
