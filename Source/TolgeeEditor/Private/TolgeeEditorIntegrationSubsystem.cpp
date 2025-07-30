@@ -207,19 +207,22 @@ void UTolgeeEditorIntegrationSubsystem::FetchIfProjectsWereUpdated()
 			if (EHttpRequestStatus::IsFinished(Request->GetStatus()))
 			{
 				const FHttpResponsePtr Response = Request->GetResponse();
-				const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(Response->GetContentAsString());
-				TSharedPtr<FJsonObject> JsonObject;
-
-				if (FJsonSerializer::Deserialize(JsonReader, JsonObject))
+				if (Response && EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 				{
-					const TArray<TSharedPtr<FJsonValue>> LanguageStats = JsonObject->GetArrayField(TEXT("languageStats"));
-					for (const TSharedPtr<FJsonValue>& Language : LanguageStats)
-					{
-						const double LanguageUpdateTime = Language->AsObject()->GetNumberField(TEXT("translationsUpdatedAt"));
-						const int64 UnixTimestampSeconds = LanguageUpdateTime / 1000;
-						const FDateTime UpdateTime = FDateTime::FromUnixTimestamp(UnixTimestampSeconds);
+					const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(Response->GetContentAsString());
+					TSharedPtr<FJsonObject> JsonObject;
 
-						LastProjectUpdate = LastProjectUpdate < UpdateTime ? UpdateTime : LastProjectUpdate;
+					if (FJsonSerializer::Deserialize(JsonReader, JsonObject))
+					{
+						const TArray<TSharedPtr<FJsonValue>> LanguageStats = JsonObject->GetArrayField(TEXT("languageStats"));
+						for (const TSharedPtr<FJsonValue>& Language : LanguageStats)
+						{
+							const double LanguageUpdateTime = Language->AsObject()->GetNumberField(TEXT("translationsUpdatedAt"));
+							const int64 UnixTimestampSeconds = LanguageUpdateTime / 1000;
+							const FDateTime UpdateTime = FDateTime::FromUnixTimestamp(UnixTimestampSeconds);
+
+							LastProjectUpdate = LastProjectUpdate < UpdateTime ? UpdateTime : LastProjectUpdate;
+						}
 					}
 				}
 
