@@ -8,6 +8,7 @@
 #include <Interfaces/IMainFrameModule.h>
 #include <LocalizationCommandletTasks.h>
 #include <LocalizationTargetTypes.h>
+#include <LocalizationSettings.h>
 
 #include "TolgeeProviderLocalizationServiceCommand.h"
 #include "TolgeeProviderLocalizationServiceWorker.h"
@@ -286,6 +287,15 @@ void FTolgeeLocalizationProvider::ExportAllCulturesForTargetToTolgee(TWeakObject
 	// TODO: Revisit after https://github.com/tolgee/tolgee-platform/issues/3053
 	LocalizationTarget->Settings.ExportSettings.POFormat = EPortableObjectFormat::Crowdin;
 
+	// NOTE: Export uses files from "ProjectDir/Saved/Tolgee/..., therefore we never want to check them out (or perforce any SCP actions)
+	// There, we disabled it temporarily before the tasks starts and reset it (in case the developer wants to use it for the import flow).
+	const bool bWasSourceControlEnabled = FLocalizationSourceControlSettings::IsSourceControlEnabled();
+	FLocalizationSourceControlSettings::SetSourceControlEnabled(false);
+	ON_SCOPE_EXIT
+	{
+		FLocalizationSourceControlSettings::SetSourceControlEnabled(bWasSourceControlEnabled);
+	};
+	
 	IMainFrameModule& MainFrameModule = FModuleManager::LoadModuleChecked<IMainFrameModule>(TEXT("MainFrame"));
 	const TSharedPtr<SWindow>& MainFrameParentWindow = MainFrameModule.GetParentWindow();
 	LocalizationCommandletTasks::ExportTextForTarget(MainFrameParentWindow.ToSharedRef(), LocalizationTarget.Get(), AbsoluteFolderPath);
