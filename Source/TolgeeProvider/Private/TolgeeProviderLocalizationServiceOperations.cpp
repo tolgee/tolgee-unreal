@@ -63,6 +63,13 @@ bool FTolgeeProviderUploadFileWorker::Execute(FTolgeeProviderLocalizationService
 
 	const UTolgeeEditorSettings* ProviderSettings = GetDefault<UTolgeeEditorSettings>();
 	const FTolgeePerTargetSettings* ProjectSettings = ProviderSettings->PerTargetSettings.Find(TargetGuid);
+	if (!ProjectSettings)
+	{
+		InCommand.ErrorMessages.Add(FString::Printf(TEXT("Project not configured for %s"), *TargetGuid.ToString()));
+		InCommand.bCommandSuccessful = false;
+		return InCommand.bCommandSuccessful;
+	}
+
 	const FString Url = FString::Printf(TEXT("%s/v2/projects/%s/single-step-import"), *ProviderSettings->GetBaseUrl(), *ProjectSettings->ProjectId);
 
 	FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
