@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <CoreMinimal.h>
+#include <Styling/SlateStyle.h>
 
 /**
  * @brief Declares the Tolgee extension visual style.

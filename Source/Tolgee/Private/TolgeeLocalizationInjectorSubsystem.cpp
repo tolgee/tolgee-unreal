@@ -7,6 +7,10 @@
 #include <Misc/EngineVersionComparison.h>
 #include <Internationalization/TextLocalizationResource.h>
 
+#if WITH_EDITOR
+#include <Editor.h>
+#endif
+
 #if WITH_LOCALIZATION_MODULE
 #include <PortableObjectFormatDOM.h>
 #include <PortableObjectPipeline.h>

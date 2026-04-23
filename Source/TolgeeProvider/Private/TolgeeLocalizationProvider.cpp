@@ -5,6 +5,11 @@
 #include <DetailCategoryBuilder.h>
 #include <ILocalizationServiceModule.h>
 #include <IStructureDetailsView.h>
+#include <Logging/MessageLog.h>
+#include <Framework/MultiBox/MultiBoxBuilder.h>
+#include <HAL/PlatformFileManager.h>
+#include <Misc/QueuedThreadPool.h>
+#include <Misc/ScopedSlowTask.h>
 #include <Interfaces/IMainFrameModule.h>
 #include <LocalizationCommandletTasks.h>
 #include <LocalizationTargetTypes.h>

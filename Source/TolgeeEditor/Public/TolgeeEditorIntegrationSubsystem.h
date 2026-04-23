@@ -4,6 +4,7 @@
 
 #include "TolgeeLocalizationInjectorSubsystem.h"
 
+#include <Engine/TimerHandle.h>
 #include <Interfaces/IHttpRequest.h>
 
 #include "TolgeeEditorIntegrationSubsystem.generated.h"

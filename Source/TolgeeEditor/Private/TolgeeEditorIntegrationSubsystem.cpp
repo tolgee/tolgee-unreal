@@ -7,6 +7,7 @@
 #include <Interfaces/IHttpResponse.h>
 #include <Misc/FileHelper.h>
 #include <FileUtilities/ZipArchiveReader.h>
+#include <HAL/PlatformFileManager.h>
 
 #include "TolgeeEditorSettings.h"
 #include "TolgeeLog.h"
