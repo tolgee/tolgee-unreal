@@ -5,6 +5,8 @@
 #include <ILocalizationServiceModule.h>
 #include <LocalizationServiceHelpers.h>
 #include <Settings/ProjectPackagingSettings.h>
+#include <Misc/ConfigCacheIni.h>
+#include <Features/IModularFeatures.h>
 
 #include "TolgeeLog.h"
 #include "TolgeeProviderLocalizationServiceOperations.h"

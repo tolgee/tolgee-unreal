@@ -4,6 +4,10 @@
 
 #include <LocalizationServiceOperations.h>
 #include <Interfaces/IHttpResponse.h>
+#include <Misc/FileHelper.h>
+#include <Dom/JsonObject.h>
+#include <Serialization/JsonWriter.h>
+#include <Serialization/JsonSerializer.h>
 #include <HttpModule.h>
 
 #include "TolgeeProviderLocalizationServiceCommand.h"

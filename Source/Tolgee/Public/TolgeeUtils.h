@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <CoreMinimal.h>
-
 #include <Interfaces/IHttpRequest.h>
 
 namespace TolgeeUtils

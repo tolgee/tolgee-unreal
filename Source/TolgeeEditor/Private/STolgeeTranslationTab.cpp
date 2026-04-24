@@ -7,6 +7,12 @@
 #include <HttpModule.h>
 #include <Interfaces/IHttpResponse.h>
 #include <Internationalization/TextNamespaceUtil.h>
+#include <Engine/Engine.h>
+#include <Engine/GameViewportClient.h>
+#include <Framework/Application/SlateApplication.h>
+#include <Widgets/Text/STextBlock.h>
+#include <Serialization/JsonReader.h>
+#include <Serialization/JsonSerializer.h>
 #include <Misc/EngineVersionComparison.h>
 #include <PlatformHttp.h>
 #include <SWebBrowser.h>

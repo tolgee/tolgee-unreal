@@ -4,6 +4,9 @@
 
 #include <Modules/ModuleManager.h>
 
+class FToolBarBuilder;
+class FExtender;
+
 /**
  * @brief TolgeeEditor module is responsible for integrating translation features into the editor (tab to allow in-editor translation, gather & upload local keys)
  */

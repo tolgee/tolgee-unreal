@@ -6,6 +6,7 @@
 
 #include <ILocalizationServiceProvider.h>
 
+class SWidget;
 class FTolgeeProviderLocalizationServiceCommand;
 
 DECLARE_DELEGATE_RetVal(FTolgeeProviderLocalizationServiceWorkerRef, FGetTolgeeProviderLocalizationServiceWorker)

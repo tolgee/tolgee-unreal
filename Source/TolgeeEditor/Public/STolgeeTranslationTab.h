@@ -2,8 +2,9 @@
 
 #pragma once
 
-#include <Widgets/SCompoundWidget.h>
+#include <Widgets/Docking/SDockTab.h>
 
+class UCanvas;
 class SWebBrowser;
 
 /**
