@@ -35,21 +35,19 @@ void STolgeeTranslationTab::Construct(const FArguments& InArgs)
 	DrawHandle = UDebugDrawService::Register(TEXT("Game"), FDebugDrawDelegate::CreateSP(this, &STolgeeTranslationTab::DebugDrawCallback));
 
 	// clang-format off
-	SDockTab::Construct( SDockTab::FArguments()
-		.TabRole(NomadTab)
-		.OnTabClosed_Raw(this, &STolgeeTranslationTab::CloseTab)
+	ChildSlot
 	[
 		SAssignNew(Browser, SWebBrowser)
 		.InitialURL(LoginUrl)
 		.ShowControls(false)
 		.ShowErrorMessage(true)
-	]);
+	];
 	// clang-format on
 
 	FGlobalTabmanager::Get()->OnActiveTabChanged_Subscribe(FOnActiveTabChanged::FDelegate::CreateSP(this, &STolgeeTranslationTab::OnActiveTabChanged));
 }
 
-void STolgeeTranslationTab::CloseTab(TSharedRef<SDockTab> DockTab)
+STolgeeTranslationTab::~STolgeeTranslationTab()
 {
 	UDebugDrawService::Unregister(DrawHandle);
 }

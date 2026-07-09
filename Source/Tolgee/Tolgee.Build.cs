@@ -9,7 +9,7 @@ public class Tolgee : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core", 
+				"Core",
 				"CoreUObject",
 				"DeveloperSettings", 
 				"Engine",
@@ -17,6 +17,9 @@ public class Tolgee : ModuleRules
 				"Json",
 				"JsonUtilities",
 				"Projects",
+				"Slate",
+				"SlateCore",
+				"WebBrowser",
 			}
 		);
 

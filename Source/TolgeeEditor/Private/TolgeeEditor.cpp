@@ -4,8 +4,9 @@
 
 #include <LevelEditor.h>
 #include <Interfaces/IPluginManager.h>
+#include <Widgets/Docking/SDockTab.h>
 
-#include "STolgeeTranslationTab.h"
+#include "STolgeeEditorTranslationTab.h"
 #include "TolgeeEditorSettings.h"
 #include "TolgeeStyle.h"
 
@@ -47,7 +48,11 @@ void FTolgeeEditorModule::RegisterWindowExtension()
 		FOnSpawnTab::CreateLambda(
 			[](const FSpawnTabArgs& Args)
 			{
-				return SNew(STolgeeTranslationTab);
+				return SNew(SDockTab)
+					.TabRole(NomadTab)
+					[
+						SNew(STolgeeEditorTranslationTab)
+					];
 			}
 		)
 	);
