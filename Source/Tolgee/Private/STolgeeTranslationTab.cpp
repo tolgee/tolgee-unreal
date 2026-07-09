@@ -11,6 +11,7 @@
 #include <Engine/GameViewportClient.h>
 #include <Framework/Application/SlateApplication.h>
 #include <Widgets/Text/STextBlock.h>
+#include <Widgets/SViewport.h>
 #include <Serialization/JsonReader.h>
 #include <Serialization/JsonSerializer.h>
 #include <Misc/EngineVersionComparison.h>
@@ -23,6 +24,37 @@
 namespace
 {
 	FName STextBlockType(TEXT("STextBlock"));
+
+	// Text might be HitTestInvisible (button/border swallows hits) so we need to walk the subtree to find it.
+	TSharedPtr<STextBlock> FindTextBlockUnderCursor(const TSharedRef<SWidget>& Root, const FVector2D& Cursor)
+	{
+		TArray<TSharedRef<SWidget>> ToVisit;
+		ToVisit.Push(Root);
+
+		while (ToVisit.Num() > 0)
+		{
+			const TSharedRef<SWidget> Widget = ToVisit.Pop();
+			if (!Widget->GetCachedGeometry().IsUnderLocation(Cursor))
+			{
+				continue;
+			}
+
+			if (Widget->GetType() == STextBlockType)
+			{
+				return StaticCastSharedRef<STextBlock>(Widget);
+			}
+
+			if (FChildren* Children = Widget->GetChildren())
+			{
+				for (int32 Index = 0; Index < Children->Num(); ++Index)
+				{
+					ToVisit.Push(Children->GetChildAt(Index));
+				}
+			}
+		}
+
+		return nullptr;
+	}
 }
 
 void STolgeeTranslationTab::Construct(const FArguments& InArgs)
@@ -61,7 +93,8 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 	}
 
 	FSlateApplication& Application = FSlateApplication::Get();
-	FWidgetPath WidgetPath = Application.LocateWindowUnderMouse(Application.GetCursorPos(), Application.GetInteractiveTopLevelWindows());
+	const FVector2D Cursor = Application.GetCursorPos();
+	const FWidgetPath WidgetPath = Application.LocateWindowUnderMouse(Cursor, Application.GetInteractiveTopLevelWindows());
 
 #if UE_VERSION_NEWER_THAN(5, 0, 0)
 	const bool bValidHover = WidgetPath.Widgets.Num() > 0 && WidgetPath.ContainsWidget(GameViewportWidget.Get());
@@ -71,13 +104,11 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 
 	if (bValidHover)
 	{
-		TSharedPtr<SWidget> CurrentHoveredWidget = WidgetPath.GetLastWidget();
-		if (CurrentHoveredWidget->GetType() == STextBlockType)
+		TSharedPtr<STextBlock> CurrentTextBlock = FindTextBlockUnderCursor(WidgetPath.GetLastWidget(), Cursor);
+		if (CurrentTextBlock.IsValid())
 		{
-			TSharedPtr<STextBlock> CurrentTextBlock = StaticCastSharedPtr<STextBlock>(CurrentHoveredWidget);
-
 			// Calculate the Start & End in local space based on widget & parent viewport
-			const FGeometry& HoveredGeometry = CurrentHoveredWidget->GetCachedGeometry();
+			const FGeometry& HoveredGeometry = CurrentTextBlock->GetCachedGeometry();
 			const FGeometry& ViewportGeometry = GameViewportWidget->GetCachedGeometry();
 
 			// TODO: make this a setting
