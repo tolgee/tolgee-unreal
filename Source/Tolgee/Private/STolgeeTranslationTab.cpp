@@ -17,8 +17,6 @@
 #include <PlatformHttp.h>
 #include <SWebBrowser.h>
 
-#include "TolgeeEditorIntegrationSubsystem.h"
-#include "TolgeeEditorSettings.h"
 #include "TolgeeLog.h"
 #include "TolgeeUtils.h"
 
@@ -29,8 +27,7 @@ namespace
 
 void STolgeeTranslationTab::Construct(const FArguments& InArgs)
 {
-	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
-	const FString LoginUrl = FString::Printf(TEXT("%s/login"), *Settings->GetBaseUrl());
+	const FString LoginUrl = FString::Printf(TEXT("%s/login"), *GetBaseUrl());
 
 	DrawHandle = UDebugDrawService::Register(TEXT("Game"), FDebugDrawDelegate::CreateSP(this, &STolgeeTranslationTab::DebugDrawCallback));
 
@@ -43,21 +40,11 @@ void STolgeeTranslationTab::Construct(const FArguments& InArgs)
 		.ShowErrorMessage(true)
 	];
 	// clang-format on
-
-	FGlobalTabmanager::Get()->OnActiveTabChanged_Subscribe(FOnActiveTabChanged::FDelegate::CreateSP(this, &STolgeeTranslationTab::OnActiveTabChanged));
 }
 
 STolgeeTranslationTab::~STolgeeTranslationTab()
 {
 	UDebugDrawService::Unregister(DrawHandle);
-}
-
-void STolgeeTranslationTab::OnActiveTabChanged(TSharedPtr<SDockTab> PreviouslyActive, TSharedPtr<SDockTab> NewlyActivated)
-{
-	if (PreviouslyActive == AsShared())
-	{
-		GEngine->GetEngineSubsystem<UTolgeeEditorIntegrationSubsystem>()->ManualFetch();
-	}
 }
 
 void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController* PC)
@@ -151,9 +138,7 @@ void STolgeeTranslationTab::ShowWidgetFor(const FString& TolgeeKeyId)
 		return;
 	}
 
-	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
-
-	const FString NewUrl = FString::Printf(TEXT("%s/projects/%s/translations/single?key=%s"), *Settings->GetBaseUrl(), *ProjectId, *TolgeeKeyId);
+	const FString NewUrl = FString::Printf(TEXT("%s/projects/%s/translations/single?key=%s"), *GetBaseUrl(), *ProjectId, *TolgeeKeyId);
 	const FString CurrentUrl = Browser->GetUrl();
 
 	if (NewUrl != CurrentUrl && Browser->IsLoaded())
@@ -166,17 +151,15 @@ void STolgeeTranslationTab::ShowWidgetFor(const FString& TolgeeKeyId)
 
 FString STolgeeTranslationTab::FindProjectIdFor(const FString& TolgeeKeyId) const
 {
-	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
-
 	TMap<FString, FHttpRequestPtr> PendingRequests;
-	for (const FString& ProjectId : Settings->ProjectIds)
+	for (const FString& ProjectId : GetProjectIds())
 	{
-		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/translations?filterKeyName=%s"), *Settings->GetBaseUrl(), *ProjectId, *TolgeeKeyId);
+		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/translations?filterKeyName=%s"), *GetBaseUrl(), *ProjectId, *TolgeeKeyId);
 
 		FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 		HttpRequest->SetVerb("GET");
 		HttpRequest->SetURL(RequestUrl);
-		HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
+		HttpRequest->SetHeader(TEXT("X-API-Key"), GetApiKey());
 		TolgeeUtils::AddSdkHeaders(HttpRequest);
 
 		HttpRequest->ProcessRequest();
