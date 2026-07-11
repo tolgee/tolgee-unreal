@@ -2,21 +2,18 @@
 
 #pragma once
 
-#include <Widgets/Docking/SDockTab.h>
+#include <Widgets/SCompoundWidget.h>
 
 class UCanvas;
 class SWebBrowser;
 
 /**
- * Nomad Tab used to display the web translation widget inside Unreal when an Textblock is hovered
+ * Widget which displays the web translation page inside Unreal when a Textblock is hovered
  */
-class STolgeeTranslationTab : public SDockTab
+class TOLGEE_API STolgeeTranslationTab : public SCompoundWidget
 {
 public:
-	SLATE_BEGIN_ARGS(STolgeeTranslationTab)
-		{
-		}
-
+	SLATE_BEGIN_ARGS(STolgeeTranslationTab) { }
 	SLATE_END_ARGS()
 
 	/**
@@ -24,15 +21,14 @@ public:
 	 */
 	void Construct(const FArguments& InArgs);
 
+	virtual ~STolgeeTranslationTab() override;
+
+protected:
+	virtual FString GetBaseUrl() const = 0;
+	virtual FString GetApiKey() const = 0;
+	virtual TArray<FString> GetProjectIds() const = 0;
+
 private:
-	/**
-	 * @brief Callback executed when the DockTab is deactivated
-	 */
-	void CloseTab(TSharedRef<SDockTab> DockTab);
-	/**
-	 * @brief Callback executed when the active tab is changed
-	 */
-	void OnActiveTabChanged(TSharedPtr<SDockTab> NewlyActivated, TSharedPtr<SDockTab> PreviouslyActive);
 	/**
 	 * @brief Callback executed when the debug service wants to draw on screen
 	 */

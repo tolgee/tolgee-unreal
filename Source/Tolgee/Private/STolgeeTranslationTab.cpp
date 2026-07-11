@@ -11,55 +11,72 @@
 #include <Engine/GameViewportClient.h>
 #include <Framework/Application/SlateApplication.h>
 #include <Widgets/Text/STextBlock.h>
+#include <Widgets/SViewport.h>
 #include <Serialization/JsonReader.h>
 #include <Serialization/JsonSerializer.h>
 #include <Misc/EngineVersionComparison.h>
 #include <PlatformHttp.h>
 #include <SWebBrowser.h>
 
-#include "TolgeeEditorIntegrationSubsystem.h"
-#include "TolgeeEditorSettings.h"
 #include "TolgeeLog.h"
 #include "TolgeeUtils.h"
 
 namespace
 {
 	FName STextBlockType(TEXT("STextBlock"));
+
+	// Text might be HitTestInvisible (button/border swallows hits) so we need to walk the subtree to find it.
+	TSharedPtr<STextBlock> FindTextBlockUnderCursor(const TSharedRef<SWidget>& Root, const FVector2D& Cursor)
+	{
+		TArray<TSharedRef<SWidget>> ToVisit;
+		ToVisit.Push(Root);
+
+		while (ToVisit.Num() > 0)
+		{
+			const TSharedRef<SWidget> Widget = ToVisit.Pop();
+			if (!Widget->GetCachedGeometry().IsUnderLocation(Cursor))
+			{
+				continue;
+			}
+
+			if (Widget->GetType() == STextBlockType)
+			{
+				return StaticCastSharedRef<STextBlock>(Widget);
+			}
+
+			if (FChildren* Children = Widget->GetChildren())
+			{
+				for (int32 Index = 0; Index < Children->Num(); ++Index)
+				{
+					ToVisit.Push(Children->GetChildAt(Index));
+				}
+			}
+		}
+
+		return nullptr;
+	}
 }
 
 void STolgeeTranslationTab::Construct(const FArguments& InArgs)
 {
-	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
-	const FString LoginUrl = FString::Printf(TEXT("%s/login"), *Settings->GetBaseUrl());
+	const FString LoginUrl = FString::Printf(TEXT("%s/login"), *GetBaseUrl());
 
 	DrawHandle = UDebugDrawService::Register(TEXT("Game"), FDebugDrawDelegate::CreateSP(this, &STolgeeTranslationTab::DebugDrawCallback));
 
 	// clang-format off
-	SDockTab::Construct( SDockTab::FArguments()
-		.TabRole(NomadTab)
-		.OnTabClosed_Raw(this, &STolgeeTranslationTab::CloseTab)
+	ChildSlot
 	[
 		SAssignNew(Browser, SWebBrowser)
 		.InitialURL(LoginUrl)
 		.ShowControls(false)
 		.ShowErrorMessage(true)
-	]);
+	];
 	// clang-format on
-
-	FGlobalTabmanager::Get()->OnActiveTabChanged_Subscribe(FOnActiveTabChanged::FDelegate::CreateSP(this, &STolgeeTranslationTab::OnActiveTabChanged));
 }
 
-void STolgeeTranslationTab::CloseTab(TSharedRef<SDockTab> DockTab)
+STolgeeTranslationTab::~STolgeeTranslationTab()
 {
 	UDebugDrawService::Unregister(DrawHandle);
-}
-
-void STolgeeTranslationTab::OnActiveTabChanged(TSharedPtr<SDockTab> PreviouslyActive, TSharedPtr<SDockTab> NewlyActivated)
-{
-	if (PreviouslyActive == AsShared())
-	{
-		GEngine->GetEngineSubsystem<UTolgeeEditorIntegrationSubsystem>()->ManualFetch();
-	}
 }
 
 void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController* PC)
@@ -76,7 +93,8 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 	}
 
 	FSlateApplication& Application = FSlateApplication::Get();
-	FWidgetPath WidgetPath = Application.LocateWindowUnderMouse(Application.GetCursorPos(), Application.GetInteractiveTopLevelWindows());
+	const FVector2D Cursor = Application.GetCursorPos();
+	const FWidgetPath WidgetPath = Application.LocateWindowUnderMouse(Cursor, Application.GetInteractiveTopLevelWindows());
 
 #if UE_VERSION_NEWER_THAN(5, 0, 0)
 	const bool bValidHover = WidgetPath.Widgets.Num() > 0 && WidgetPath.ContainsWidget(GameViewportWidget.Get());
@@ -86,13 +104,11 @@ void STolgeeTranslationTab::DebugDrawCallback(UCanvas* Canvas, APlayerController
 
 	if (bValidHover)
 	{
-		TSharedPtr<SWidget> CurrentHoveredWidget = WidgetPath.GetLastWidget();
-		if (CurrentHoveredWidget->GetType() == STextBlockType)
+		TSharedPtr<STextBlock> CurrentTextBlock = FindTextBlockUnderCursor(WidgetPath.GetLastWidget(), Cursor);
+		if (CurrentTextBlock.IsValid())
 		{
-			TSharedPtr<STextBlock> CurrentTextBlock = StaticCastSharedPtr<STextBlock>(CurrentHoveredWidget);
-
 			// Calculate the Start & End in local space based on widget & parent viewport
-			const FGeometry& HoveredGeometry = CurrentHoveredWidget->GetCachedGeometry();
+			const FGeometry& HoveredGeometry = CurrentTextBlock->GetCachedGeometry();
 			const FGeometry& ViewportGeometry = GameViewportWidget->GetCachedGeometry();
 
 			// TODO: make this a setting
@@ -153,9 +169,7 @@ void STolgeeTranslationTab::ShowWidgetFor(const FString& TolgeeKeyId)
 		return;
 	}
 
-	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
-
-	const FString NewUrl = FString::Printf(TEXT("%s/projects/%s/translations/single?key=%s"), *Settings->GetBaseUrl(), *ProjectId, *TolgeeKeyId);
+	const FString NewUrl = FString::Printf(TEXT("%s/projects/%s/translations/single?key=%s"), *GetBaseUrl(), *ProjectId, *TolgeeKeyId);
 	const FString CurrentUrl = Browser->GetUrl();
 
 	if (NewUrl != CurrentUrl && Browser->IsLoaded())
@@ -168,17 +182,15 @@ void STolgeeTranslationTab::ShowWidgetFor(const FString& TolgeeKeyId)
 
 FString STolgeeTranslationTab::FindProjectIdFor(const FString& TolgeeKeyId) const
 {
-	const UTolgeeEditorSettings* Settings = GetDefault<UTolgeeEditorSettings>();
-
 	TMap<FString, FHttpRequestPtr> PendingRequests;
-	for (const FString& ProjectId : Settings->ProjectIds)
+	for (const FString& ProjectId : GetProjectIds())
 	{
-		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/translations?filterKeyName=%s"), *Settings->GetBaseUrl(), *ProjectId, *TolgeeKeyId);
+		const FString RequestUrl = FString::Printf(TEXT("%s/v2/projects/%s/translations?filterKeyName=%s"), *GetBaseUrl(), *ProjectId, *TolgeeKeyId);
 
 		FHttpRequestRef HttpRequest = FHttpModule::Get().CreateRequest();
 		HttpRequest->SetVerb("GET");
 		HttpRequest->SetURL(RequestUrl);
-		HttpRequest->SetHeader(TEXT("X-API-Key"), Settings->ApiKey);
+		HttpRequest->SetHeader(TEXT("X-API-Key"), GetApiKey());
 		TolgeeUtils::AddSdkHeaders(HttpRequest);
 
 		HttpRequest->ProcessRequest();
