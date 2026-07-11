@@ -10,7 +10,7 @@ public:
 	SLATE_BEGIN_ARGS(STolgeeCommandTranslationTab) { }
 		SLATE_ARGUMENT(FString, BaseUrl)
 		SLATE_ARGUMENT(FString, ApiKey)
-		SLATE_ARGUMENT(FString, ProjectId)
+		SLATE_ARGUMENT(TArray<FString>, ProjectIds)
 	SLATE_END_ARGS()
 
 	/**
@@ -28,5 +28,5 @@ protected:
 private:
 	FString BaseUrl;
 	FString ApiKey;
-	FString ProjectId;
+	TArray<FString> ProjectIds;
 };

@@ -8,9 +8,12 @@ static FAutoConsoleCommandWithWorldAndArgs GTolgeeOpenRuntimeTranslationWindow(
 	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda(
 		[](const TArray<FString>& Args, UWorld* World)
 		{
-			const FString BaseUrl   = Args.IsValidIndex(0) ? Args[0].TrimQuotes() : TEXT("");
-			const FString ApiKey    = Args.IsValidIndex(1) ? Args[1].TrimQuotes() : TEXT("");
-			const FString ProjectId = Args.IsValidIndex(2) ? Args[2].TrimQuotes() : TEXT("");
+			const FString BaseUrl = Args.IsValidIndex(0) ? Args[0].TrimQuotes() : TEXT("");
+			const FString ApiKey = Args.IsValidIndex(1) ? Args[1].TrimQuotes() : TEXT("");
+			const FString Ids = Args.IsValidIndex(2) ? Args[2].TrimQuotes() : TEXT("");
+
+			TArray<FString> ProjectIds;
+			Ids.ParseIntoArray(ProjectIds, TEXT(","), true);
 
 			const TSharedRef<SWindow> Window = SNew(SWindow)
 				.Title(INVTEXT("Tolgee In-Context Translation"))
@@ -19,7 +22,7 @@ static FAutoConsoleCommandWithWorldAndArgs GTolgeeOpenRuntimeTranslationWindow(
 			const TSharedRef<STolgeeCommandTranslationTab> TranslationTab = SNew(STolgeeCommandTranslationTab)
 				.BaseUrl(BaseUrl)
 				.ApiKey(ApiKey)
-				.ProjectId(ProjectId);
+				.ProjectIds(ProjectIds);
 
 			Window->SetContent(TranslationTab);
 			FSlateApplication::Get().AddWindow(Window);
@@ -30,7 +33,7 @@ void STolgeeCommandTranslationTab::Construct(const FArguments& InArgs)
 {
 	BaseUrl = InArgs._BaseUrl;
 	ApiKey = InArgs._ApiKey;
-	ProjectId = InArgs._ProjectId;
+	ProjectIds = InArgs._ProjectIds;
 
 	STolgeeTranslationTab::Construct(STolgeeTranslationTab::FArguments());
 }
@@ -47,5 +50,5 @@ FString STolgeeCommandTranslationTab::GetApiKey() const
 
 TArray<FString> STolgeeCommandTranslationTab::GetProjectIds() const
 {
-	return {ProjectId};
+	return ProjectIds;
 }
