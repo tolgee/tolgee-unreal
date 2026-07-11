@@ -2,6 +2,9 @@
 
 #include "STolgeeCommandTranslationTab.h"
 
+#include <Framework/Application/SlateApplication.h>
+#include <Widgets/SWindow.h>
+
 static FAutoConsoleCommandWithWorldAndArgs GTolgeeOpenRuntimeTranslationWindow(
 	TEXT("Tolgee.OpenRuntimeTranslationWindow"),
 	TEXT("Opens the Tolgee in-context translation tab in a separated window."),
