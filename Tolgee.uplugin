@@ -34,6 +34,12 @@
 				"Linux",
 				"Mac",
 				"Win64"
+			],
+			"Plugins": [
+				{
+					"Name": "WebBrowserWidget",
+					"Enabled": true
+				}
 			]
 		},
 		{
@@ -45,12 +51,6 @@
 				"Mac",
 				"Linux"
 			]
-		}
-	],
-	"Plugins": [
-		{
-			"Name": "WebBrowserWidget",
-			"Enabled": true
 		}
 	]
 }
